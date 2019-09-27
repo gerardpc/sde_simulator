@@ -2,10 +2,12 @@
 
 Description
 --------------
-Functions + libraries to generate sample paths of a given 
-stochastic process, defined by a certain SDE
+Functions + libraries to generate sample paths of a given vectorial
+stochastic process, defined by the SDE
 
-dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0.
+dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0
+
+and where Y has arbitrary (but finite!) dimension.
 
 A typical application would be generating n sample paths Y_t, computing
 a certain function of them f(Y_t) and then averaging the result, to find 
@@ -82,6 +84,40 @@ E.g.
 
     >> python sde_script.py
 
-The results will be saved as png figures.
+The results will be saved as png figures. Check the "test.png" file for
+an example output.
+
+
+2- Changing the a(t,Y) and b(t,Y) functions of the SDE
+--------------
+The a(t,Y) and b(t,Y) functions are defined in the file sde_library.cpp 
+as the drift_function and diffusion_function, respectively.
+
+The f[i] vector inside each of these functions contains the driving
+term for the equations of motion (the drift_function is the "deterministic"
+part and the diffusion_function the "stochastic" part). 
+
+For instance, consider a Brownian particle completely driven by thermal 
+noise (i.e., not subject to any force potential). If the particle only 
+moves in one dimension, the equations will be
+
+ x' = v
+ v' = 0 + sigma/m
+
+The first equation is clear, and the 2nd equation is Newton's 2nd law.
+This is precisely the equation included in the code by default, and 
+should be used as an example for other, arbitrary, drift and diffusion
+functions. Of course, every time any of these functions is changed, the
+C++ code should be recompiled with the command indicated in section 1.
+
 
 > By: Gerard Planes Conangla
+
+
+
+
+
+
+
+
+
