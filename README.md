@@ -101,8 +101,8 @@ For instance, consider a Brownian particle completely driven by thermal
 noise (i.e., not subject to any force potential). If the particle only 
 moves in one dimension, the equations will be
 
- x' = v
- v' = 0 + sigma/m
+    x' = v
+    v' = 0 + sigma/m
 
 The first equation is clear, and the 2nd equation is Newton's 2nd law.
 This is precisely the equation included in the code by default, and 
