@@ -173,6 +173,24 @@ std::vector<std::vector<double>> &b){
     return c;
 }
 
+// function that is applied element by element in function_array
+double f(double x){
+    return x*x;
+}
+
+// apply f(x) on array element by element
+std::vector<std::vector<double>> function_array(std::vector<std::vector<double>> &a){
+            
+    std::vector<std::vector<double>> c = ini_matrix(a.size(), a[0].size(), 0);
+    for(int i = 0; i < a.size(); i++){
+        for(int j = 0; j < a[0].size(); j++){
+            c[i][j] = f(a[i][j]);
+        }
+    }
+    return c;
+}
+
+
 // product of vector times scalar
 std::vector<double> scalar_multiplication(std::vector<double> &a, double k){
     std::vector<double> result(a.size());
@@ -358,8 +376,8 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
 }
 
 // Generate num_traces traces with the RK method and return 
-// sum of variance to file. Obs: you need to divide by num_traces
-// outside this function to get average!
+// sum of function <f(Y_t)> (Obs: remains to divide by num_traces
+// to estimate average)
 void generate_avg_trace(int num_traces, std::vector<double> t_interval, 
 std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt){
 
@@ -372,7 +390,7 @@ std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt){
     avg_var = array_dot_product(y, y);
     for(int i = 1; i < num_traces; i++){
         runge_kutta(t_interval, y0, dt, y); 
-        tmp1 = array_dot_product(y, y);
+        tmp1 = function_array(y);
         avg_var = array_sum(avg_var, tmp1);
     }    
 }

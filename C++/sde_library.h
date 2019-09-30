@@ -102,6 +102,12 @@ std::vector<std::vector<double>> array_scalar_multiplication(std::vector<std::ve
 std::vector<std::vector<double>> array_dot_product(std::vector<std::vector<double>> &a,
     std::vector<std::vector<double>> &b);
 
+// function that is applied element by element in function_array
+double f(double x);
+
+// apply f(x) on array element by element
+std::vector<std::vector<double>> function_array(std::vector<std::vector<double>> &a);
+
 // product of vector times scalar
 std::vector<double> scalar_multiplication(std::vector<double> &a, double k);
 
