@@ -24,8 +24,11 @@ The code is divided in two parts:
 - A C++ main() + library functions for the most numerically intensive 
 part: generating the traces Y_t, calculating f(Y_t) and averaging them. 
 Then write the result in a file. Note that in the present form, the C++
-main calculates the VARIANCE, i.e. f(Y_t) = Y_t^2, and not any arbitrary
-function. The code uses multithreading and assumes a computer with 4 cores.
+main calculates (by default) the VARIANCE, i.e. f(Y_t) = Y_t^2, and not 
+any arbitrary function. The function which expected value is calculated
+is defined in sde_library.cpp as "double f(double f)" and can be changed
+to any other function the user wants to define.
+The code uses multithreading and assumes a computer with 4 cores.
 
 - MATLAB and Python scripts to load the saved trace and plot the results.
 
@@ -110,6 +113,12 @@ should be used as an example for other, arbitrary, drift and diffusion
 functions. Of course, every time any of these functions is changed, the
 C++ code should be recompiled with the command indicated in section 1.
 
+3- Changing the function f(x) that is used in the expected value, <f(Y_t)>
+--------------
+The f(Y_t) function is defined in the file sde_library.cpp as
+"double f(double x)". Replacing the function, which by default returns 
+"return x*x;" (to calculate the variance) is straightforward. Just remember
+to write it in C++.
 
 > By: Gerard Planes Conangla
 
