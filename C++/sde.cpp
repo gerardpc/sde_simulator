@@ -42,11 +42,15 @@
  *********************************************************************** 
  * REFERENCES:
  * 
+ * GIT REPOSITORY
+ * https://github.com/gerardpc/sde_simulator
+ * 
+ * SDE RK method
  * https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_method_%28SDE%29#Variation_of_the_Improved_Euler_is_flexible
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  26.09.2019
+ *  01.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster. Using main + 3 more threads (i.e., assumes computer with
@@ -128,16 +132,16 @@ int main(int argc, char* argv[]){
         }
     }
 
+    //==================================================================
+    // RK method    
+    // measure initial time
+    auto start = std::chrono::high_resolution_clock::now(); 
+    
     // preallocate average of f(x) trace vectors
     std::vector<std::vector<double>> avg_var1;
     std::vector<std::vector<double>> avg_var2;
     std::vector<std::vector<double>> avg_var3;
     std::vector<std::vector<double>> avg_var4; 
-    
-    //==================================================================
-    // RK method    
-    // measure initial time
-    auto start = std::chrono::high_resolution_clock::now(); 
     
     // Run 4 parallel RK methods to speed code x4 
     // run 3 simulations in thread t1, t2, t3

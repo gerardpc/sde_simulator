@@ -112,7 +112,7 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     ax.set_xlim([min(tt), max(tt)])  
     ax.set_ylim([min(avg_var[x_dim, :]), max(avg_var[x_dim, :]*1.1)])    
     
-    fig0.savefig("./test0.png", dpi = 1000)
+    fig0.savefig("./test0.png", dpi = 400)
     
     # Plot 0
     fig1, ax = plt.subplots()
@@ -132,7 +132,7 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     ax.set_xlim([min(tt), max(tt)])  
     ax.set_ylim([min(avg_var[v_dim, :]), max(avg_var[v_dim, :]*1.1)])    
     
-    fig1.savefig("./test1.png", dpi = 1000)
+    fig1.savefig("./test1.png", dpi = 400)
 
 
 

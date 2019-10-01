@@ -42,11 +42,15 @@
  *********************************************************************** 
  * REFERENCES:
  * 
+ * GIT REPOSITORY
+ * https://github.com/gerardpc/sde_simulator
+ * 
+ * SDE RK method
  * https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_method_%28SDE%29#Variation_of_the_Improved_Euler_is_flexible
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  25.09.2019
+ *  01.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster. Using main + 3 more threads (i.e., assumes computer with
