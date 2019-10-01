@@ -29,9 +29,6 @@ if ~exist("./simulated_traces", 'dir')
     mkdir("./simulated_traces")
 end
 
-% Sanity check: num_traces not multiple of 4, make it
-num_traces = num_traces - mod(num_traces, 4);
-
 % Put initial values to a string to call ./sde.out routine
 ini_values_string = "";
 for i = 1:n_dim
@@ -41,9 +38,7 @@ end
 %% Print info on stdout
 % Info on the method
 fprintf("====================================================================\n");
-fprintf("Estimate moments of SDE with modified Runge_kutta of strong order 1.\n");
-% print number of traces on stdout
-fprintf("Number of traces that will be generated: %d\n\n", num_traces);
+fprintf("Estimate moments of SDE with modified Runge_kutta of strong order 1.\n\n");
 
 % delete files with old traces (if it already exists)
 if isfile('./simulated_traces/sde_sample_path_0.txt')
@@ -59,6 +54,7 @@ status = system("../C++/sde.out " + ...
 
 %% import traces from files
 fprintf("\nImporting traces...\n");
+tic;
 ini_t = toc;
 avg_var_x = importdata("./simulated_traces/sde_sample_path_0.txt");
 avg_var_v = importdata("./simulated_traces/sde_sample_path_1.txt");

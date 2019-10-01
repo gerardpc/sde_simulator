@@ -89,10 +89,25 @@ int main(int argc, char* argv[]){
     }
     // number of traces to simulate
     int num_traces;
+    bool many_traces;
     if(argc < 5){ 
         num_traces = 25; // default value, 25*4 = 100 traces
     } else {
-        num_traces = atoi(argv[4])/4; // input value
+        // case of few traces: not multithreading
+        if(atoi(argv[4]) < 4){
+            num_traces = atoi(argv[4]);
+            many_traces = false;
+            // print number of traces on stdout
+            printf("Number of traces that will be generated: %d\n", num_traces);
+        // case of many traces
+        } else {
+            // input value of num_traces
+            // notice it gets rounded to 0 mod(4)
+            num_traces = atoi(argv[4])/4;             
+            many_traces = true;
+            // print number of traces on stdout
+            printf("Number of traces that will be generated: %d\n", num_traces*4);
+        }
     }
     // problem dimension
     int n_dim;
@@ -126,33 +141,49 @@ int main(int argc, char* argv[]){
     
     // Run 4 parallel RK methods to speed code x4 
     // run 3 simulations in thread t1, t2, t3
-    thread t1(generate_avg_trace, num_traces, t_interval, y0, ref(avg_var1), dt);
-    thread t2(generate_avg_trace, num_traces, t_interval, y0, ref(avg_var2), dt);
-    thread t3(generate_avg_trace, num_traces, t_interval, y0, ref(avg_var3), dt);
+    if(many_traces){
+        // multithreading if num_traces >= 4        
+        thread t1(generate_avg_trace, num_traces, t_interval, y0, ref(avg_var1), dt);
+        thread t2(generate_avg_trace, num_traces, t_interval, y0, ref(avg_var2), dt);
+        thread t3(generate_avg_trace, num_traces, t_interval, y0, ref(avg_var3), dt);
     
-    // run 1 more simulation in main
-    generate_avg_trace(num_traces, t_interval, y0, avg_var4, dt);  
+        // run 1 more simulation in main
+        generate_avg_trace(num_traces, t_interval, y0, avg_var4, dt);  
     
-    // join threads when they finish
-    t1.join();
-    t2.join();
-    t3.join();
+        // join threads when they finish
+        t1.join();
+        t2.join();
+        t3.join();
     
-    // Calculate sum of variances and put it to avg_var1
-    avg_var1 = array_sum(avg_var1, avg_var2);
-    avg_var1 = array_sum(avg_var1, avg_var3);
-    avg_var1 = array_sum(avg_var1, avg_var4);
+        // Calculate sum of variances and put it to avg_var1
+        avg_var1 = array_sum(avg_var1, avg_var2);
+        avg_var1 = array_sum(avg_var1, avg_var3);
+        avg_var1 = array_sum(avg_var1, avg_var4);
     
-    // divide by num_traces to estimate <x^2_i(t)>
-    double num_tracesf = num_traces;
-    double ntraces_factor = 1/(num_tracesf*4);
-    avg_var1 = array_scalar_multiplication(avg_var1, ntraces_factor);
-    
-    // calculate and print execution time
-    auto stop = std::chrono::high_resolution_clock::now(); 
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-    printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
-            num_traces*4, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+        // divide by num_traces to estimate <f(y_t)_i(t)>
+        double num_tracesf = num_traces;
+        double ntraces_factor = 1/(num_tracesf*4);
+        avg_var1 = array_scalar_multiplication(avg_var1, ntraces_factor);
+        
+        // calculate and print execution time
+        auto stop = std::chrono::high_resolution_clock::now(); 
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+        printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+                num_traces*4, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+    } else {
+        // generate single thread
+        generate_avg_trace(num_traces, t_interval, y0, avg_var1, dt);  
+        // divide by num_traces to estimate <f(y_t)_i(t)>
+        double num_tracesf = num_traces;
+        double ntraces_factor = 1/(num_tracesf);
+        avg_var1 = array_scalar_multiplication(avg_var1, ntraces_factor);
+        
+        // calculate and print execution time
+        auto stop = std::chrono::high_resolution_clock::now(); 
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+        printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+                num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+    }
     
     //==================================================================    
     // Print results   

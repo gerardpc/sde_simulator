@@ -49,9 +49,6 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
         # if not, create it
         os.makedirs("./simulated_traces")
 
-    # Sanity check: num_traces not multiple of 4, make it
-    num_traces = num_traces - num_traces % 4
-
     # Put initial values to a string to call ./sde.out routine
     ini_values_string = ""
     for i in range(n_dim):
@@ -60,9 +57,7 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     # Print info on stdout
     # Info on the method
     print("====================================================================")
-    print("Estimate moments of SDE with modified Runge_kutta of strong order 1.")
-    # print number of traces on stdout
-    print("Number of traces that will be generated: %d\n" % num_traces)
+    print("Estimate moments of SDE with modified Runge_kutta of strong order 1.\n")
 
     # delete files with old traces, if there are any
     if os.path.exists("./simulated_traces/sde_sample_path_0.txt"):
@@ -97,15 +92,17 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
         tt = tt[0:len(avg_var[0,:])]
         avg_var = avg_var[:, 0:len(tt)]
     
-    fig, ax = plt.subplots()
-    
-    # In this case, only plot velocity (adapt the code)
+    x_dim = 0;
     v_dim = 1;
+    
+    # Plot 0
+    fig0, ax = plt.subplots()
+    
     # Plot theory comparison
     yy_theory = plot_theory(tt)
+    
     # Plot simulated variance
-    ax.plot(tt, yy_theory)
-    ax.plot(tt, avg_var[v_dim, :])
+    ax.plot(tt, avg_var[x_dim, :])
     ax.grid(True)
     
     plt.xlabel("time (s)", fontsize = 18)
@@ -113,9 +110,29 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     plt.title("Simulated variance", fontsize = 18)  
     
     ax.set_xlim([min(tt), max(tt)])  
+    ax.set_ylim([min(avg_var[x_dim, :]), max(avg_var[x_dim, :]*1.1)])    
+    
+    fig0.savefig("./test0.png", dpi = 1000)
+    
+    # Plot 0
+    fig1, ax = plt.subplots()
+    
+    # Plot theory comparison
+    yy_theory = plot_theory(tt)
+    
+    # Plot simulated variance
+    ax.plot(tt, yy_theory)
+    ax.plot(tt, avg_var[v_dim, :])
+    ax.grid(True)
+    
+    plt.xlabel("time (s)", fontsize = 18)
+    plt.ylabel("$\mathbb{E}(v^2(t))$", fontsize = 18)
+    plt.title("Simulated variance", fontsize = 18)  
+    
+    ax.set_xlim([min(tt), max(tt)])  
     ax.set_ylim([min(avg_var[v_dim, :]), max(avg_var[v_dim, :]*1.1)])    
     
-    fig.savefig("./test.png", dpi = 1000)
+    fig1.savefig("./test1.png", dpi = 1000)
 
 
 
