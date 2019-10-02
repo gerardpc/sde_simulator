@@ -50,7 +50,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  01.10.2019
+ *  02.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster. Using main + 3 more threads (i.e., assumes computer with
@@ -68,6 +68,77 @@
 #include <chrono> // time related library, for seeeding
 #include <thread> // for multithreading
 #include "sde_library.h" // SDE library
+
+//======================================================================
+// PROBLEM FUNCTIONS
+//======================================================================
+// SDE FUNCTIONS
+// dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
+// drift of process: a(t,Y)
+std::vector<double> drift_function(std::vector<double> y, double t){
+    // output vector
+    std::vector<double> f(y.size(), 0);
+    
+    // use physical names
+    double x = y[0];
+    double v = y[1];    
+    
+    // Definitions: experimental parameters
+    double m = 9.2e-18;
+    double gamma = 3.5e-11;
+    double w = 2*M_PI*2000;
+    double eps = 6.3e-5;
+    double T = 295;
+    double k_B = 1.38065e-23;
+    double sigma = sqrt(2*k_B*T*gamma);
+    double gamma_m = gamma/m;
+    double eps_m = eps/m;
+    
+    // i.e., x' = v
+    f[0] = v; 
+    f[1] = 0; //(-gamma_m*v + eps_m*std::cos(w*t)*x);//1/m*(-gamma*v + eps*std::cos(w*t)*x);
+        
+    // return output
+    return f;
+}
+
+// diffusion of process: b(t, Y)
+std::vector<double> diffusion_function(std::vector<double> y, double t){
+    // output vector
+    std::vector<double> f(y.size(), 0);
+    
+    // use physical names
+    double x = y[0];
+    double v = y[1];
+    
+    // Definitions: experimental parameters
+    double m = 9.2e-18;
+    double gamma = 3.5e-11;
+    double w = 2*M_PI*2e4;
+    double eps = 6.3e-9;
+    double T = 295;
+    double k_B = 1.38065e-23;
+    double sigma = sqrt(2*k_B*T*gamma);
+    
+    // Calculate force
+    // No noise in x:
+    // f[0] = 0; -> but already 0 by initialization
+    // Stochastic force in momentum:
+    f[1] = sigma/m;
+    
+    // return output
+    return f;
+}
+
+// Function f(Y_t) that is applied to every trace and averaged to
+// estimate <f(Y_t)>
+double f(double x){
+    return x*x; // square function by default, to estimate variance
+}
+
+//======================================================================
+// LIBRARY FUNCTIONS
+//======================================================================
 
 // C++ function that mimics MATLAB linspace
 std::vector<double> linspace(std::vector<double> interval, int n) {
@@ -177,11 +248,6 @@ std::vector<std::vector<double>> &b){
     return c;
 }
 
-// function that is applied element by element in function_array
-double f(double x){
-    return x*x;
-}
-
 // apply f(x) on array element by element
 std::vector<std::vector<double>> function_array(std::vector<std::vector<double>> &a){
             
@@ -213,62 +279,6 @@ std::vector<std::vector<double>> array_scalar_multiplication(std::vector<std::ve
         }
     }
     return result;
-}
-
-// drift of process
-std::vector<double> drift_function(std::vector<double> y, double t){
-    // output vector
-    std::vector<double> f(y.size(), 0);
-    
-    // use physical names
-    double x = y[0];
-    double v = y[1];    
-    
-    // Definitions: experimental parameters
-    double m = 9.2e-18;
-    double gamma = 3.5e-11;
-    double w = 2*M_PI*2000;
-    double eps = 6.3e-5;
-    double T = 295;
-    double k_B = 1.38065e-23;
-    double sigma = sqrt(2*k_B*T*gamma);
-    double gamma_m = gamma/m;
-    double eps_m = eps/m;
-    
-    // i.e., x' = v
-    f[0] = v; 
-    f[1] = 0; //(-gamma_m*v + eps_m*std::cos(w*t)*x);//1/m*(-gamma*v + eps*std::cos(w*t)*x);
-        
-    // return output
-    return f;
-}
-
-// diffusion of process
-std::vector<double> diffusion_function(std::vector<double> y, double t){
-    // output vector
-    std::vector<double> f(y.size(), 0);
-    
-    // use physical names
-    double x = y[0];
-    double v = y[1];
-    
-    // Definitions: experimental parameters
-    double m = 9.2e-18;
-    double gamma = 3.5e-11;
-    double w = 2*M_PI*2e4;
-    double eps = 6.3e-9;
-    double T = 295;
-    double k_B = 1.38065e-23;
-    double sigma = sqrt(2*k_B*T*gamma);
-    
-    // Calculate force
-    // No noise in x:
-    // f[0] = 0; -> but already 0 by initialization
-    // Stochastic force in momentum:
-    f[1] = sigma/m;
-    
-    // return output
-    return f;
 }
 
 // Roll a dice between low and high
@@ -397,4 +407,156 @@ std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt){
         tmp1 = function_array(y);
         avg_var = array_sum(avg_var, tmp1);
     }    
+}
+
+// Generate num_traces traces with generate_avg_trace in 1 or 4 different
+// threads. Print elapsed time for execution on stdout. Returns average
+// of f(Y_t)
+std::vector<std::vector<double>> RK_all(int num_traces, bool many_traces, 
+std::vector<double> t_interval, std::vector<double> y0, double dt){
+    // measure initial time
+    auto start = std::chrono::high_resolution_clock::now(); 
+    
+    // preallocate average of f(x) trace vectors (first 3 on threads,
+    // avg_trace is filled with result of main thread and later on with
+    // average of all traces
+    std::vector<std::vector<double>> avg_trace1;
+    std::vector<std::vector<double>> avg_trace2;
+    std::vector<std::vector<double>> avg_trace3;
+    std::vector<std::vector<double>> avg_trace;
+    
+    // Run 4 parallel RK methods to speed code x4 
+    // run 3 simulations in thread t1, t2, t3
+    if(many_traces){
+        // multithreading if num_traces >= 4        
+        std::thread t1(generate_avg_trace, num_traces, t_interval, y0, ref(avg_trace1), dt);
+        std::thread t2(generate_avg_trace, num_traces, t_interval, y0, ref(avg_trace2), dt);
+        std::thread t3(generate_avg_trace, num_traces, t_interval, y0, ref(avg_trace3), dt);
+    
+        // run 1 more simulation in main
+        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt);  
+    
+        // join threads when they finish
+        t1.join();
+        t2.join();
+        t3.join();
+    
+        // Calculate sum of variances and put it to avg_trace
+        avg_trace = array_sum(avg_trace1, avg_trace);
+        avg_trace = array_sum(avg_trace2, avg_trace);
+        avg_trace = array_sum(avg_trace3, avg_trace);
+    
+        // divide by num_traces to estimate <f(y_t)_i(t)>
+        double num_tracesf = num_traces;
+        double ntraces_factor = 1/(num_tracesf*4);
+        avg_trace = array_scalar_multiplication(avg_trace, ntraces_factor);
+        
+        // calculate and print execution time
+        auto stop = std::chrono::high_resolution_clock::now(); 
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+        printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+                num_traces*4, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+
+    } else {
+        // generate single thread
+        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt);  
+        // divide by num_traces to estimate <f(y_t)_i(t)>
+        double num_tracesf = num_traces;
+        double ntraces_factor = 1/(num_tracesf);
+        avg_trace = array_scalar_multiplication(avg_trace, ntraces_factor);
+        
+        // calculate and print execution time
+        auto stop = std::chrono::high_resolution_clock::now(); 
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+        printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+                num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+    }        
+    return avg_trace;
+}
+
+// Print results   
+// avg trace number i (where i is degree of freedom number i) will be
+// printed on file ./simulated_traces/sde_sample_path_i.txt
+int print_results(int n_dim, std::vector<std::vector<double>> avg_trace){
+    std::vector<std::string> filename(n_dim);
+    std::cout << "Average traces saved in files:\n";
+    for(int i = 0; i < n_dim; i++){
+        // generate new filename
+        filename[i] = "./simulated_traces/sde_sample_path_" + std::to_string(i) + ".txt";
+        std::cout << filename[i] << "\n";
+    }
+    
+    // Print results of dimension dim to file
+    // Notice that, by default, this APPENDS a new row to the file
+    for(int i = 0; i < n_dim; i++){
+        // open file
+        FILE* fp = fopen(filename[i].c_str(), "a"); // <-- a for "append"
+        if (fp == NULL) {
+          fprintf(stderr, "Can't open output file\n");
+          exit(1);
+        }
+        // print to file
+        print_array_asrow(avg_trace, i, fp);    
+        // Close file
+        fclose(fp);
+    }
+    return 0;
+}
+
+// fill problem parameters with inputs, if given (otherwise use default
+// values)
+int fill_parameters_w_inputs(int argc, char* argv[], double &dt, 
+std::vector<double> &t_interval, int &num_traces, bool &many_traces, 
+int &n_dim, std::vector<double> &y0){
+    // dt: time step
+    if(argc < 2){
+        dt = 1e-5; // default value
+    } else {
+        dt = atof(argv[1]); // input value
+    }
+    // time interval
+    if(argc < 3){ 
+        t_interval = {0, 1e-1}; // default value
+    } else {
+        t_interval = {atof(argv[2]), atof(argv[3])}; // input value
+    }
+    // number of traces to simulate
+    if(argc < 5){ 
+        num_traces = 25; // default value, 25*4 = 100 traces
+    } else {
+        // case of few traces: not multithreading
+        if(atoi(argv[4]) < 4){
+            num_traces = atoi(argv[4]);
+            many_traces = false;
+            // print number of traces on stdout
+            printf("Number of traces that will be generated: %d\n", num_traces);
+        // case of many traces
+        } else {
+            // input value of num_traces
+            // notice it gets rounded to 0 mod(4)
+            num_traces = atoi(argv[4])/4;             
+            many_traces = true;
+            // print number of traces on stdout
+            printf("Number of traces that will be generated: %d\n", num_traces*4);
+        }
+    }
+    // problem dimension
+    if(argc < 6){ 
+        n_dim = 2; // 2D problem, think of x and v.
+    } else {
+        n_dim = atoi(argv[5]); // input value
+    }
+    // initial conditions, if given
+    std::vector<double> v_zeros(n_dim);
+    y0 = v_zeros;
+    if(argc < 6){ 
+        // default: initial conditions = 0
+        y0 = {0, 0};
+    } else {
+        // read initial conditions
+        for(int i = 0; i < n_dim; i++){
+            y0[i] = atof(argv[6 + i]);
+        }
+    }
+    return 0;
 }

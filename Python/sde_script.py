@@ -17,7 +17,7 @@ import numerical_sde_cpp as sde
 
 dt = 1e-5 # seconds
 t_interval = [0, 1e-1]
-num_traces = 400
+num_traces = 300
 n_dim = 2 # 2D: x and v
 initial_values = [0, 0] # start at origin
 

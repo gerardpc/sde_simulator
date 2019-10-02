@@ -50,7 +50,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  01.10.2019
+ *  02.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster. Using main + 3 more threads (i.e., assumes computer with
@@ -139,8 +139,22 @@ void generate_traces(int num_traces, std::string filename,
 void generate_avg_trace(int num_traces, std::vector<double> t_interval, 
 std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt);
     
-    
-    
+// Generate num_traces traces with generate_avg_trace in 1 or 4 different
+// threads. Print elapsed time for execution on stdout. Returns average
+// of f(Y_t)
+std::vector<std::vector<double>> RK_all(int num_traces, bool many_traces, 
+std::vector<double> t_interval, std::vector<double> y0, double dt);
+
+// Print results   
+// avg trace number i (where i is degree of freedom number i) will be
+// printed on file ./simulated_traces/sde_sample_path_i.txt
+int print_results(int n_dim, std::vector<std::vector<double>> avg_trace);
+
+// fill problem parameters with inputs, if given (otherwise use default
+// values)
+int fill_parameters_w_inputs(int argc, char* argv[], double &dt, 
+std::vector<double> &t_interval, int &num_traces, bool &many_traces, 
+int &n_dim, std::vector<double> &y0);
     
     
     
