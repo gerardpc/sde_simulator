@@ -35,7 +35,7 @@ def plot_theory(tt):
     gamma = 3.5e-11
     T = 295
     k_B = 1.38065e-23
-    sigma_noise = (2*k_B*T*gamma)**(1/2)
+    sigma_noise = (2*k_B*T*gamma)**(0.5)
     # Return analytical variance expression
     return (sigma_noise/m)**2*tt
 
@@ -74,10 +74,10 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     print("\nImporting traces...")
     ini_t = time.time()
     
-    avg_var = numpy.loadtxt("./simulated_traces/sde_sample_path_0.txt")
+    avg_f = numpy.loadtxt("./simulated_traces/sde_sample_path_0.txt")
     for i in range(1, n_dim):
         new_row = numpy.loadtxt("./simulated_traces/sde_sample_path_" + str(i) + ".txt")
-        avg_var = numpy.stack((avg_var, new_row))
+        avg_f = numpy.stack((avg_f, new_row))
         
     end_t = time.time()
     print("Elapsed time to import traces: %f s\n" % (end_t - ini_t))
@@ -88,9 +88,9 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     # Generate time vector
     tt = numpy.arange(t_interval[0], t_interval[1], dt)
     
-    if len(tt) != len(avg_var[0,:]): # Check that both vectors are of same length
-        tt = tt[0:len(avg_var[0,:])]
-        avg_var = avg_var[:, 0:len(tt)]
+    if len(tt) != len(avg_f[0,:]): # Check that both vectors are of same length
+        tt = tt[0:len(avg_f[0,:])]
+        avg_f = avg_f[:, 0:len(tt)]
     
     x_dim = 0;
     v_dim = 1;
@@ -98,11 +98,8 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     # Plot 0
     fig0, ax = plt.subplots()
     
-    # Plot theory comparison
-    yy_theory = plot_theory(tt)
-    
     # Plot simulated variance
-    ax.plot(tt, avg_var[x_dim, :])
+    ax.plot(tt, avg_f[x_dim, :])
     ax.grid(True)
     
     plt.xlabel("time (s)", fontsize = 18)
@@ -110,11 +107,11 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     plt.title("Simulated variance", fontsize = 18)  
     
     ax.set_xlim([min(tt), max(tt)])  
-    ax.set_ylim([min(avg_var[x_dim, :]), max(avg_var[x_dim, :]*1.1)])    
+    ax.set_ylim([min(avg_f[x_dim, :]), max(avg_f[x_dim, :]*1.1)])    
     
     fig0.savefig("./test0.png", dpi = 400)
     
-    # Plot 0
+    # Plot 1
     fig1, ax = plt.subplots()
     
     # Plot theory comparison
@@ -122,7 +119,7 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     
     # Plot simulated variance
     ax.plot(tt, yy_theory)
-    ax.plot(tt, avg_var[v_dim, :])
+    ax.plot(tt, avg_f[v_dim, :])
     ax.grid(True)
     
     plt.xlabel("time (s)", fontsize = 18)
@@ -130,7 +127,7 @@ def numerical_sde(dt, t_interval, num_traces, n_dim, initial_values):
     plt.title("Simulated variance", fontsize = 18)  
     
     ax.set_xlim([min(tt), max(tt)])  
-    ax.set_ylim([min(avg_var[v_dim, :]), max(avg_var[v_dim, :]*1.1)])    
+    ax.set_ylim([min(avg_f[v_dim, :]), max(avg_f[v_dim, :]*1.1)])    
     
     fig1.savefig("./test1.png", dpi = 400)
 
