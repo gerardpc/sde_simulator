@@ -1,7 +1,7 @@
 /********************************************************************** 
  * DESCRIPTION:
  * 
- * Function + libraries to generate sample paths of a given stochastic 
+ * Library to generate sample paths of a given stochastic 
  * process, defined by a user-defined SDE
  * 
  * dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
@@ -11,34 +11,13 @@
  * (diffusion term), since many methods (e.g. the Milstein method) 
  * have an effective strong order < 1 when b is a constant.
  * 
- ***********************************************************************  
- * INPUTS:  Call function with
- *          >> ./sde.out inp1 inp2 inp3 inp4 inp5 inp6 inp7...
- *          inp1: dt, time discretization step. Type: double
- *          inp2: t_ini, initial time. Type: double
- *          inp3: t_end, final time. Type: double
- *          inp4: num_traces, number of traces to simulate. Type: int
- *                Obs: needs to be num_traces%4 = 0
- *          inp5: n_dim, number of dimensions; e.g., harmonic oscillator
- *                would be 2. Type: int
- *          inp6: y0[0], 1st initial condition. Type: double
- *          inp7: y0[1], 2nd initial condition. Type: double. More inputs
- *                if n_dim is larger.
- *          E.g:
- *          ./sde.out 1e-5 0 1e-1 100 2 0 0
- * 
- * OUTPUTS: Prints elapsed time on stdout. Prints sample traces as rows 
- *          in "./simulated_traces/sde_sample_path_i.txt", will create 
- *          4 of them (one for every thread, see Observations). 
  *********************************************************************** 
  * OBSERVATIONS:
  * 
- * Uses 4 threads (3 + main), assuming a computer with 4 cores.
- * 
- * Compile with:
- * >> g++ sde.cpp sde_library.cpp -o sde.out -O3 -pthread
- * This assumes that sde.cpp, sde_library.cpp and sde_library.h are on 
- * the same folder.
+ * Function RK_all (arguably the main function of the library) 
+ * automatically adapts to number of cores (divides trace generation among
+ * them).
+ *
  *********************************************************************** 
  * REFERENCES:
  * 
@@ -50,23 +29,19 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  02.10.2019
- *      Obs: Working function. Prints on a file estimated <x^2(t)>
+ *  04.10.2019
+ *      Obs: Working library. Prints on a file estimated <x^2(t)>. This
+ *      function can be changed, defined as function double f(double x).
  *      Performance, compared with pure MATLAB code is about x500 times 
- *      faster. Using main + 3 more threads (i.e., assumes computer with
- *      4 cores).
+ *      faster with 4 cores. Automatically adapts to number of cores.
  *********************************************************************** 
  */
-
-#include <iostream> // stdin, stdout 
-#include <cstdio> // printf family
-#include <cmath> // most math functions
+ 
+// STANDARD LIBRARIES
 #include <vector> // vector library
 #include <string> // string library
-#include <random> // random number generation
 #include <stdlib.h> // includes rand()
-#include <chrono> // time related library, for seeeding
-#include <thread> // for multithreading
+
 
 // C++ function that mimics MATLAB linspace
 std::vector<double> linspace(std::vector<double> t_interval, int n);

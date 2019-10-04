@@ -1,7 +1,7 @@
 /********************************************************************** 
  * DESCRIPTION:
  * 
- * Function + libraries to generate sample paths of a given stochastic 
+ * Library to generate sample paths of a given stochastic 
  * process, defined by a user-defined SDE
  * 
  * dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
@@ -11,34 +11,13 @@
  * (diffusion term), since many methods (e.g. the Milstein method) 
  * have an effective strong order < 1 when b is a constant.
  * 
- ***********************************************************************  
- * INPUTS:  Call function with
- *          >> ./sde.out inp1 inp2 inp3 inp4 inp5 inp6 inp7...
- *          inp1: dt, time discretization step. Type: double
- *          inp2: t_ini, initial time. Type: double
- *          inp3: t_end, final time. Type: double
- *          inp4: num_traces, number of traces to simulate. Type: int
- *                Obs: needs to be num_traces%4 = 0
- *          inp5: n_dim, number of dimensions; e.g., harmonic oscillator
- *                would be 2. Type: int
- *          inp6: y0[0], 1st initial condition. Type: double
- *          inp7: y0[1], 2nd initial condition. Type: double. More inputs
- *                if n_dim is larger.
- *          E.g:
- *          ./sde.out 1e-5 0 1e-1 100 2 0 0
- * 
- * OUTPUTS: Prints elapsed time on stdout. Prints sample traces as rows 
- *          in "./simulated_traces/sde_sample_path_i.txt", will create 
- *          4 of them (one for every thread, see Observations). 
  *********************************************************************** 
  * OBSERVATIONS:
  * 
- * Uses 4 threads (3 + main), assuming a computer with 4 cores.
- * 
- * Compile with:
- * >> g++ sde.cpp sde_library.cpp -o sde.out -O3 -pthread
- * This assumes that sde.cpp, sde_library.cpp and sde_library.h are on 
- * the same folder.
+ * Function RK_all (arguably the main function of the library) 
+ * automatically adapts to number of cores (divides trace generation among
+ * them).
+ *
  *********************************************************************** 
  * REFERENCES:
  * 
@@ -50,14 +29,15 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  02.10.2019
- *      Obs: Working function. Prints on a file estimated <x^2(t)>
+ *  04.10.2019
+ *      Obs: Working library. Prints on a file estimated <x^2(t)>. This
+ *      function can be changed, defined as function double f(double x).
  *      Performance, compared with pure MATLAB code is about x500 times 
- *      faster. Using main + 3 more threads (i.e., assumes computer with
- *      4 cores).
+ *      faster with 4 cores. Automatically adapts to number of cores.
  *********************************************************************** 
  */
  
+ // STANDARD LIBRARIES
 #include <iostream> // stdin, stdout 
 #include <cstdio> // printf family
 #include <cmath> // most math functions
@@ -67,6 +47,8 @@
 #include <stdlib.h> // includes rand()
 #include <chrono> // time related library, for seeeding
 #include <thread> // for multithreading
+
+// MY LIBRARIES
 #include "sde_library.h" // SDE library
 
 //======================================================================
@@ -287,7 +269,7 @@ int roll_dice(int low, int high){
     return dice_result;
 }
 
-// Runge-Kutta function as programmed in MATLAB
+// Runge-Kutta function: numerical code.
 // output in y
 void runge_kutta(std::vector<double> t_interval,
 std::vector<double> y0, double dt, std::vector<std::vector<double>> &y){
@@ -409,55 +391,70 @@ std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt){
     }    
 }
 
-// Generate num_traces traces with generate_avg_trace in 1 or 4 different
-// threads. Print elapsed time for execution on stdout. Returns average
+// Generate num_traces traces with generate_avg_trace using different
+// threads (automatic core detection. 
+// Print elapsed time for execution on stdout. Returns average
 // of f(Y_t)
 std::vector<std::vector<double>> RK_all(int num_traces, bool many_traces, 
 std::vector<double> t_interval, std::vector<double> y0, double dt){
     // measure initial time
     auto start = std::chrono::high_resolution_clock::now(); 
     
-    // preallocate average of f(x) trace vectors (first 3 on threads,
-    // avg_trace is filled with result of main thread and later on with
-    // average of all traces
-    std::vector<std::vector<double>> avg_trace1;
-    std::vector<std::vector<double>> avg_trace2;
-    std::vector<std::vector<double>> avg_trace3;
+    // get number of cores
+    unsigned num_cores = std::thread::hardware_concurrency();
+    // in case it is not able to detect any core, set to 1
+    if(num_cores == 0){
+        num_cores = 1;
+    }
+    unsigned num_threads = num_cores - 1;
+    printf("Detected number of cores: %d\n", num_cores);
+    
+    // preallocate average of f(x) trace vectors 
     std::vector<std::vector<double>> avg_trace;
     
-    // Run 4 parallel RK methods to speed code x4 
-    // run 3 simulations in thread t1, t2, t3
-    if(many_traces){
-        // multithreading if num_traces >= 4        
-        std::thread t1(generate_avg_trace, num_traces, t_interval, y0, ref(avg_trace1), dt);
-        std::thread t2(generate_avg_trace, num_traces, t_interval, y0, ref(avg_trace2), dt);
-        std::thread t3(generate_avg_trace, num_traces, t_interval, y0, ref(avg_trace3), dt);
-    
+    // Run parallel RK methods to speed code x num_threads 
+    if(many_traces and num_threads >= 1){ // if multithreading
+        // calculate traces per core
+        num_traces = num_traces - num_traces % num_cores;
+        printf("Number of traces that will be generated: %d\n", num_traces);
+        int traces_per_core = num_traces/num_cores;
+        printf("Number of traces per core: %d\n", traces_per_core);
+        
+        // vector of RK results and threads
+        std::vector<std::vector<std::vector<double>>> thread_avg_trace(num_threads);
+        std::vector<std::thread> t;
+        
+        // initiate simulations in threads
+        for(int i = 0; i < num_threads; i++){
+            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt));
+        }
+        
         // run 1 more simulation in main
-        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt);  
+        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt);  
     
         // join threads when they finish
-        t1.join();
-        t2.join();
-        t3.join();
+        for(int i = 0; i < num_threads; i++){
+            t[i].join();
+        }
     
-        // Calculate sum of variances and put it to avg_trace
-        avg_trace = array_sum(avg_trace1, avg_trace);
-        avg_trace = array_sum(avg_trace2, avg_trace);
-        avg_trace = array_sum(avg_trace3, avg_trace);
+        // Calculate sum of variances and put it on avg_trace
+        for(int i = 0; i < num_threads; i++){
+            avg_trace = array_sum(thread_avg_trace[i], avg_trace);
+        }
     
-        // divide by num_traces to estimate <f(y_t)_i(t)>
+        // divide by num_traces to estimate <f(y_t)_i>
         double num_tracesf = num_traces;
-        double ntraces_factor = 1/(num_tracesf*4);
+        double ntraces_factor = 1/(num_tracesf);
         avg_trace = array_scalar_multiplication(avg_trace, ntraces_factor);
         
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
         printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
-                num_traces*4, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+                num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
 
-    } else {
+    } else {  // not multithreading
+        printf("Number of traces that will be generated: %d\n", num_traces);
         // generate single thread
         generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt);  
         // divide by num_traces to estimate <f(y_t)_i(t)>
@@ -520,24 +517,17 @@ int &n_dim, std::vector<double> &y0){
     } else {
         t_interval = {atof(argv[2]), atof(argv[3])}; // input value
     }
-    // number of traces to simulate
+
     if(argc < 5){ 
-        num_traces = 25; // default value, 25*4 = 100 traces
+        num_traces = 100; // default value
     } else {
+        num_traces = atoi(argv[4]);
         // case of few traces: not multithreading
-        if(atoi(argv[4]) < 4){
-            num_traces = atoi(argv[4]);
+        if(atoi(argv[4]) < 4){ 
             many_traces = false;
-            // print number of traces on stdout
-            printf("Number of traces that will be generated: %d\n", num_traces);
-        // case of many traces
-        } else {
-            // input value of num_traces
-            // notice it gets rounded to 0 mod(4)
-            num_traces = atoi(argv[4])/4;             
+        // case of many traces: multithreading
+        } else {   
             many_traces = true;
-            // print number of traces on stdout
-            printf("Number of traces that will be generated: %d\n", num_traces*4);
         }
     }
     // problem dimension

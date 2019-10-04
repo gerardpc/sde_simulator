@@ -1,8 +1,8 @@
 /********************************************************************** 
  * DESCRIPTION:
  * 
- * Function + libraries to generate sample paths of a given stochastic 
- * process, defined by a user-defined SDE
+ * Function to generate sample paths of a given stochastic 
+ * process, defined by the SDE
  * 
  * dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
  * 
@@ -27,13 +27,14 @@
  *          E.g:
  *          ./sde.out 1e-5 0 1e-1 100 2 0 0
  * 
- * OUTPUTS: Prints elapsed time on stdout. Prints sample traces as rows 
- *          in "./simulated_traces/sde_sample_path_i.txt", will create 
- *          4 of them (one for every thread, see Observations). 
+ * OUTPUTS: Prints elapsed time and other details on stdout. 
+ *          Prints sample traces as rows in files
+ *          "./simulated_traces/sde_sample_path_i.txt"
+ *          Every file contains one of the degrees of freedom
  *********************************************************************** 
  * OBSERVATIONS:
  * 
- * Uses 4 threads (3 + main), assuming a computer with 4 cores.
+ * Detects number of cores and divides traces generation among threads.
  * 
  * Compile with:
  * >> g++ sde.cpp sde_library.cpp -o sde.out -O3 -pthread
@@ -50,24 +51,15 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  02.10.2019
+ *  04.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
- *      faster. Using main + 3 more threads (i.e., assumes computer with
- *      4 cores).
+ *      faster with 4 cores. Automatically adapts to number of cores.
  *********************************************************************** 
  */
 
 // STANDARD LIBRARIES
-#include <iostream> // stdin, stdout 
-#include <cstdio> // printf family
-#include <cmath> // most math functions
 #include <vector> // vector library
-#include <string> // string library
-#include <random> // random number generation
-#include <stdlib.h> // includes rand()
-#include <chrono> // time related library, for seeeding
-#include <thread> // for multithreading
 
 // MY LIBRARIES
 #include "sde_library.h"
@@ -86,7 +78,7 @@ int main(int argc, char* argv[]){
     // number of traces to simulate
     int num_traces;
     bool many_traces; // true if num_traces >= 4
-    // problem dimension    
+    // problem dimension (e.g., for a harm. oscillator = 2) 
     int n_dim;
     // initial conditions, if given
     vector<double> y0;
