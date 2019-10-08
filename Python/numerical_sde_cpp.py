@@ -31,8 +31,8 @@ import matplotlib.pyplot as plt
 # Calculate analytical expression vector for comparison
 def plot_theory(tt):
     # Experimental parameters (just an example, free Brownian particle)
-    m = 9.2e-18
-    gamma = 3.5e-11
+    m = 1.495e-17
+    gamma = 4.075e-11
     T = 295
     k_B = 1.38065e-23
     sigma_noise = (2*k_B*T*gamma)**(0.5)

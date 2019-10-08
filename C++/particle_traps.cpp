@@ -16,7 +16,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  04.10.2019
+ *  08.10.2019
  *      Parts are working, field functions not yet tested.
  *********************************************************************** 
  */
@@ -31,7 +31,7 @@
 #include <fstream> // for reading file
 
 // MY LIBRARIES
-#include "particle_traps.h"
+#include "particle_traps.hpp"
 
 
 //======================================================================
@@ -63,6 +63,7 @@ void paul_trap::print(){
     printf("V: %.4e\n", V);
     printf("d: %.4e\n", d);
     printf("eps: %.4e\n", eps);
+    printf("beta: %.4e\n", beta);
     printf("T: %.4e\n", T);
     printf("pressure: %.4e\n", pressure);
     printf("gamma_ambient: %.4e\n", gamma_ambient);
@@ -90,7 +91,7 @@ void opt_tweezer::print(){
 // Constructor functions
 void gaussian_beam::fill(){        
     // gaussian beam file
-    std::ifstream input_file("./gaussian_beam.txt");
+    std::ifstream input_file("../eq_params/gaussian_beam.txt");
     
     // vector of doubles containing values from file
     std::vector<double> file_values;
@@ -125,7 +126,7 @@ void gaussian_beam::fill(){
 
 void paul_trap::fill(){
     // paul trap file
-    std::ifstream input_file("./paul_trap.txt");
+    std::ifstream input_file("../eq_params/paul_trap.txt");
     
     // vector of doubles containing values from file
     std::vector<double> file_values;
@@ -163,15 +164,13 @@ void paul_trap::fill(){
     g_norm = gamma/m;
     sigma = sqrt(2*k_B*T*gamma);
     
-    // print value of beta, as defined in Iz. et al PRE 1995
-    double beta = 4*Q*V*1.602e-19/(m*pow(d*w_dr, 2));
-    printf("Value of Beta: %.4e\n", beta);
-    printf("Value of eps: %.4e\n", eps);
+    // value of beta, as defined in Iz. et al PRE 1995
+    beta = 4*Q*V*1.602e-19/(m*pow(d*w_dr, 2));
 }
 
 void opt_tweezer::fill(){
     // optical tweezer file
-    std::ifstream input_file("./optical_tweezer.txt");
+    std::ifstream input_file("../eq_params/optical_tweezer.txt");
     
     // vector of doubles containing values from file
     std::vector<double> file_values;
@@ -252,32 +251,6 @@ double force_z_gb(double r, double z, double alpha, gaussian_beam &gb, double h)
 // paul trap force field
 double force_paul_trap(double x, double t, paul_trap &pt){
     return (pt.eps*cos(pt.w_dr*t)*x);
-}
-
-//======================================================================
-// FUNCTIONS HERE
-//======================================================================
-// Main function for testing
-int main(){
-    gaussian_beam gb;
-    paul_trap pt;
-    opt_tweezer ot;
-    
-    gb.fill();
-    gb.print();
-    printf("\n");
-    
-    pt.fill();
-    pt.print();
-    printf("\n");
-    
-    ot.fill();
-    ot.print();
-    
-    double a = 150e-9;
-    
-    double h = 1e-5*a; // discretization size
-    return 0;
 }
 
 

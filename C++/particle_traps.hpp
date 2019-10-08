@@ -16,7 +16,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  04.10.2019
+ *  08.10.2019
  *      Parts are working, field functions not yet tested.
  *********************************************************************** 
  */
@@ -64,6 +64,7 @@ struct paul_trap{
     double V;
     double d;
     double eps;
+    double beta;
     // ambient parameters
     double T; 
     double pressure;

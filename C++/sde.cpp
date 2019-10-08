@@ -37,7 +37,8 @@
  * Detects number of cores and divides traces generation among threads.
  * 
  * Compile with:
- * >> g++ sde.cpp sde_library.cpp -o sde.out -O3 -pthread
+ * >> g++ sde.cpp sde_library.cpp num_vector.cpp particle_traps.cpp -o sde.out -O3 -pthread
+ *
  * This assumes that sde.cpp, sde_library.cpp and sde_library.h are on 
  * the same folder.
  *********************************************************************** 
@@ -51,7 +52,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  04.10.2019
+ *  08.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster with 4 cores. Automatically adapts to number of cores.
@@ -62,7 +63,8 @@
 #include <vector> // vector library
 
 // MY LIBRARIES
-#include "sde_library.h"
+#include "num_vector.hpp"
+#include "sde_library.hpp"
 
 using namespace std; // avoid writing std::function every time
 
@@ -76,22 +78,24 @@ int main(int argc, char* argv[]){
     // time interval
     vector<double> t_interval;
     // number of traces to simulate
-    int num_traces;
+    unsigned int num_traces;
     bool many_traces; // true if num_traces >= 4
     // problem dimension (e.g., for a harm. oscillator = 2) 
-    int n_dim;
+    unsigned int n_dim;
     // initial conditions, if given
     vector<double> y0;
     
     // Fill problem parameters with inputs, if given.
     // Otherwise use default values: dt = 1e-5, t_interval = [0 1e-1],
     // num_traces = 100
-    fill_parameters_w_inputs(argc, argv, dt, t_interval, num_traces,
-    many_traces, n_dim, y0);
+    fill_parameters_w_inputs(argc, argv, dt, t_interval, num_traces, many_traces, n_dim, y0);
 
     //==================================================================
-    // RK method. Put <f(Y_t)> on avg_trace
-    vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt);
+    // import trap equations from files in eq_params folder
+    eq_params trap;
+    trap.fill();
+    // call RK method. Put <f(Y_t)> on avg_trace
+    vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt, trap);
     
     //==================================================================    
     // Print results   
@@ -103,12 +107,6 @@ int main(int argc, char* argv[]){
     // Finish execution    
     return 0;
 }
-
-
-
-
-
-
 
 
 

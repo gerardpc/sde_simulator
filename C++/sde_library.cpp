@@ -31,9 +31,8 @@
  *  By GP Conangla
  *  04.10.2019
  *      Obs: Working library. Prints on a file estimated <x^2(t)>. This
- *      function can be changed, defined as function double f(double x).
- *      Performance, compared with pure MATLAB code is about x500 times 
- *      faster with 4 cores. Automatically adapts to number of cores.
+ *      function can be changed (defined in num_vector.hpp as
+ *      "double f(double x)".
  *********************************************************************** 
  */
  
@@ -49,15 +48,17 @@
 #include <thread> // for multithreading
 
 // MY LIBRARIES
-#include "sde_library.h" // SDE library
+#include "num_vector.hpp" // basic vector manipulation library
+#include "sde_library.hpp"
 
 //======================================================================
-// PROBLEM FUNCTIONS
+// MATH PROBLEM DEFINITION FUNCTIONS
 //======================================================================
 // SDE FUNCTIONS
 // dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
 // drift of process: a(t,Y)
-std::vector<double> drift_function(std::vector<double> y, double t){
+
+std::vector<double> drift_function(std::vector<double> y, double t, eq_params args){
     // output vector
     std::vector<double> f(y.size(), 0);
     
@@ -66,15 +67,6 @@ std::vector<double> drift_function(std::vector<double> y, double t){
     double v = y[1];    
     
     // Definitions: experimental parameters
-    double m = 9.2e-18;
-    double gamma = 3.5e-11;
-    double w = 2*M_PI*2000;
-    double eps = 6.3e-5;
-    double T = 295;
-    double k_B = 1.38065e-23;
-    double sigma = sqrt(2*k_B*T*gamma);
-    double gamma_m = gamma/m;
-    double eps_m = eps/m;
     
     // i.e., x' = v
     f[0] = v; 
@@ -85,7 +77,7 @@ std::vector<double> drift_function(std::vector<double> y, double t){
 }
 
 // diffusion of process: b(t, Y)
-std::vector<double> diffusion_function(std::vector<double> y, double t){
+std::vector<double> diffusion_function(std::vector<double> y, double t, eq_params args){
     // output vector
     std::vector<double> f(y.size(), 0);
     
@@ -93,192 +85,39 @@ std::vector<double> diffusion_function(std::vector<double> y, double t){
     double x = y[0];
     double v = y[1];
     
-    // Definitions: experimental parameters
-    double m = 9.2e-18;
-    double gamma = 3.5e-11;
-    double w = 2*M_PI*2e4;
-    double eps = 6.3e-9;
-    double T = 295;
-    double k_B = 1.38065e-23;
-    double sigma = sqrt(2*k_B*T*gamma);
-    
     // Calculate force
     // No noise in x:
     // f[0] = 0; -> but already 0 by initialization
     // Stochastic force in momentum:
-    f[1] = sigma/m;
+    f[1] = args.ot.sigma/args.ot.m;
     
     // return output
     return f;
 }
 
-// Function f(Y_t) that is applied to every trace and averaged to
-// estimate <f(Y_t)>
-double f(double x){
-    return x*x; // square function by default, to estimate variance
+
+//======================================================================
+// Equation parameters struct constructor
+//======================================================================
+void eq_params::fill(){
+    ot.fill();
+    pt.fill();
+    gb.fill();
 }
 
 //======================================================================
 // LIBRARY FUNCTIONS
 //======================================================================
-
-// C++ function that mimics MATLAB linspace
-std::vector<double> linspace(std::vector<double> interval, int n) {
-    // preallocate output vector
-    std::vector<double> v_linspace(n);
-    // calculate h
-    double h = (interval[1] - interval[0])/(n-1);
-    // fill vector
-    for(int i = 0; i < n + 1; i++) {
-        v_linspace[i] = interval[0] + h*i;
-    }
-    return v_linspace;
-}
-
-// C++ function that mimics MATLAB a:h:b
-std::vector<double> generate_v_from_h(std::vector<double> interval, double h) {
-    // output vector
-    std::vector<double> v;
-    double current_value = interval[0];
-    while(current_value <= interval[1]) {
-        v.push_back(current_value);
-        current_value = current_value + h;
-    }
-    return v;
-}
-
-// C++ function that mimics MATLAB zeros (but with arbitrary "value")
-std::vector<std::vector<double>> ini_matrix(int n_arrays, int n_columns, double value){
-    std::vector<std::vector<double>> y(n_arrays, std::vector<double>(n_columns, value));
-    return y;
-}
-
-// C++ function to print array on stdout
-int print_array(std::vector<std::vector <double>> a, std::FILE* fp) {
-    for(int i = 0; i < a.size(); i++){
-        for(int j = 0; j < a[0].size(); j++){
-            fprintf(fp, "%.10f ", a[i][j]);
-        }
-        fprintf(fp, "\n");
-    }
-    return 0;
-}
-
-// C++ function to print array on stdout
-int print_array_asrow(std::vector<std::vector <double>> a, int dim, std::FILE* fp) {
-    for(int i = 0; i < a.size(); i++){
-        fprintf(fp, "%.10f ", a[i][dim]);
-    }
-    fprintf(fp, "\n");
-    return 0;
-}
-
-// C++ function to print vector on stdout
-int print_vector(std::vector<double> v, std::FILE* fp) {
-    for(int i = 0; i < v.size(); i++){
-        fprintf(fp, "%f\n", v[i]);
-    }
-    return 0;
-}
-
-// Print "hola!" in stdout for debugging
-int hola(){
-    printf("hola!\n");
-}
-
-// sum of 2 vectors OF THE SAME SIZE
-std::vector<double> vector_sum(std::vector<double> &a, std::vector<double> &b){
-    std::vector<double> c(a.size());
-    for(int i = 0; i < a.size(); i++){
-        c[i] = a[i] + b[i];
-    }
-    return c;
-}
-
-// sum of 2 arrays OF THE SAME SIZE
-std::vector<std::vector<double>> array_sum(std::vector<std::vector<double>> &a,
-std::vector<std::vector<double>> &b){
-        
-    std::vector<std::vector<double>> c = ini_matrix(a.size(), a[0].size(), 0);
-    for(int i = 0; i < a.size(); i++){
-        for(int j = 0; j < a[0].size(); j++){
-            c[i][j] = a[i][j] + b[i][j];
-        }
-    }
-    return c;
-}
-
-// dot product of 2 vectors OF THE SAME SIZE
-std::vector<double> dot_product(std::vector<double> &a, std::vector<double> &b){
-    std::vector<double> c(a.size());
-    for(int i = 0; i < a.size(); i++){
-        c[i] = a[i]*b[i];
-    }
-    return c;
-}
-
-// dot product of 2 arrays OF THE SAME SIZE
-std::vector<std::vector<double>> array_dot_product(std::vector<std::vector<double>> &a,
-std::vector<std::vector<double>> &b){
-            
-    std::vector<std::vector<double>> c = ini_matrix(a.size(), a[0].size(), 0);
-    for(int i = 0; i < a.size(); i++){
-        for(int j = 0; j < a[0].size(); j++){
-            c[i][j] = a[i][j]*b[i][j];
-        }
-    }
-    return c;
-}
-
-// apply f(x) on array element by element
-std::vector<std::vector<double>> function_array(std::vector<std::vector<double>> &a){
-            
-    std::vector<std::vector<double>> c = ini_matrix(a.size(), a[0].size(), 0);
-    for(int i = 0; i < a.size(); i++){
-        for(int j = 0; j < a[0].size(); j++){
-            c[i][j] = f(a[i][j]);
-        }
-    }
-    return c;
-}
-
-
-// product of vector times scalar
-std::vector<double> scalar_multiplication(std::vector<double> &a, double k){
-    std::vector<double> result(a.size());
-    for(int i = 0; i < a.size(); i++){
-        result[i] = k*a[i];
-    }
-    return result;
-}
-
-// product of array times scalar
-std::vector<std::vector<double>> array_scalar_multiplication(std::vector<std::vector<double>> &a, double k){
-    std::vector<std::vector<double>> result = ini_matrix(a.size(), a[0].size(), 0);
-    for(int i = 0; i < a.size(); i++){
-        for(int j = 0; j < a[0].size(); j++){
-            result[i][j] = k*a[i][j];
-        }
-    }
-    return result;
-}
-
-// Roll a dice between low and high
-int roll_dice(int low, int high){
-    int dice_result = rand() % (high - low + 1) + low;
-    return dice_result;
-}
-
 // Runge-Kutta function: numerical code.
 // output in y
 void runge_kutta(std::vector<double> t_interval,
-std::vector<double> y0, double dt, std::vector<std::vector<double>> &y){
+std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, eq_params args){
     
     // PARAMETERS AND INITIALIZATION
     // generate time vector
     
     std::vector<double> t = generate_v_from_h(t_interval, dt);
-    int n_time = t.size();
+    unsigned int n_time = t.size();
     // preallocate solution vector y, full of zeros
     y = ini_matrix(n_time, y0.size(), 0);
 
@@ -306,9 +145,9 @@ std::vector<double> y0, double dt, std::vector<std::vector<double>> &y){
     std::normal_distribution<double> n_distribution(0, 1);
     
     // the RUNGE - KUTTA method itself
-    for(int n = 1; n < n_time; n++){
+    for(unsigned int n = 1; n < n_time; n++){
         // calculate dW_t
-        for(int i = 0; i < dW_t.size(); i++){
+        for(unsigned int i = 0; i < dW_t.size(); i++){
             dW_t[i] = n_distribution(generator)*sqrt(dt);
         }
         
@@ -316,27 +155,27 @@ std::vector<double> y0, double dt, std::vector<std::vector<double>> &y){
         S_k = sk_vec[roll_dice(0,1)];
         
         // Calculate k_1
-        tmp1 = drift_function(y.back(), t[n - 1]);
+        tmp1 = drift_function(y.back(), t[n - 1], args);
         tmp1 = scalar_multiplication(tmp1, dt);
 
-        for(int i = 0; i < dW_t.size(); i++){
+        for(unsigned int i = 0; i < dW_t.size(); i++){
             tmp2[i] = dW_t[i] - S_k*sqrt(dt);
         }
 
-        tmp3 = diffusion_function(y[n - 1], t[n - 1]);
+        tmp3 = diffusion_function(y[n - 1], t[n - 1], args);
         tmp2 = dot_product(tmp2, tmp3);
 
         k_1 = vector_sum(tmp1, tmp2);
 
         // Calculate k_2
-        tmp1 = drift_function(vector_sum(y[n - 1], k_1), t[n]);
+        tmp1 = drift_function(vector_sum(y[n - 1], k_1), t[n], args);
         tmp1 = scalar_multiplication(tmp1, dt);
         
-        for(int i = 0; i < dW_t.size(); i++){
+        for(unsigned int i = 0; i < dW_t.size(); i++){
             tmp2[i] = dW_t[i] + S_k*sqrt(dt);
         }
         
-        tmp3 = diffusion_function(y[n - 1], t[n]);      
+        tmp3 = diffusion_function(y[n - 1], t[n], args);      
         tmp2 = dot_product(tmp2, tmp3);  
         
         k_2 = vector_sum(tmp1, tmp2);        
@@ -351,8 +190,8 @@ std::vector<double> y0, double dt, std::vector<std::vector<double>> &y){
 
 // Generate num_traces traces with the RK method and print 
 // each of them to file in different rows
-void generate_traces(int num_traces, std::string filename, 
-std::vector<double> t_interval, std::vector<double> y0, double dt){
+void generate_traces(unsigned int num_traces, std::string filename, 
+std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params args){
     // open to write to file
     FILE* fp = fopen(filename.c_str(), "a");
     if (fp == NULL) {
@@ -362,8 +201,8 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
     // preallocate solution vector y
     std::vector<std::vector<double>> y;
     // call RK method num_traces times
-    for(int i = 0; i < num_traces; i++){
-        runge_kutta(t_interval, y0, dt, y);  
+    for(unsigned int i = 0; i < num_traces; i++){
+        runge_kutta(t_interval, y0, dt, y, args);  
         // Print results to file 
         print_array_asrow(y, 0, fp);
     }
@@ -374,29 +213,29 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
 // Generate num_traces traces with the RK method and return 
 // sum of function <f(Y_t)> (Obs: remains to divide by num_traces
 // to estimate average)
-void generate_avg_trace(int num_traces, std::vector<double> t_interval, 
-std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt){
+void generate_avg_trace(unsigned int num_traces, std::vector<double> t_interval, 
+std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, eq_params args){
 
     // preallocate solution vector y and tmp1 vector
     std::vector<std::vector<double>> y;
     std::vector<std::vector<double>> tmp1;
     
     // call RK method num_traces times
-    runge_kutta(t_interval, y0, dt, y); 
+    runge_kutta(t_interval, y0, dt, y, args); 
     avg_var = array_dot_product(y, y);
-    for(int i = 1; i < num_traces; i++){
-        runge_kutta(t_interval, y0, dt, y); 
+    for(unsigned int i = 1; i < num_traces; i++){
+        runge_kutta(t_interval, y0, dt, y, args); 
         tmp1 = function_array(y);
         avg_var = array_sum(avg_var, tmp1);
-    }    
+    }
 }
 
 // Generate num_traces traces with generate_avg_trace using different
 // threads (automatic core detection. 
 // Print elapsed time for execution on stdout. Returns average
 // of f(Y_t)
-std::vector<std::vector<double>> RK_all(int num_traces, bool many_traces, 
-std::vector<double> t_interval, std::vector<double> y0, double dt){
+std::vector<std::vector<double>> RK_all(unsigned int num_traces, bool many_traces, 
+std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params args){
     // measure initial time
     auto start = std::chrono::high_resolution_clock::now(); 
     
@@ -407,6 +246,7 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
         num_cores = 1;
     }
     unsigned num_threads = num_cores - 1;
+    printf("------------------------------------------\n");
     printf("Detected number of cores: %d\n", num_cores);
     
     // preallocate average of f(x) trace vectors 
@@ -425,23 +265,23 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
         std::vector<std::thread> t;
         
         // initiate simulations in threads
-        for(int i = 0; i < num_threads; i++){
-            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt));
+        for(unsigned int i = 0; i < num_threads; i++){
+            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt, args));
         }
         
         // run 1 more simulation in main
-        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt);  
+        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt, args);  
     
         // join threads when they finish
-        for(int i = 0; i < num_threads; i++){
+        for(unsigned int i = 0; i < num_threads; i++){
             t[i].join();
         }
     
         // Calculate sum of variances and put it on avg_trace
-        for(int i = 0; i < num_threads; i++){
+        for(unsigned int i = 0; i < num_threads; i++){
             avg_trace = array_sum(thread_avg_trace[i], avg_trace);
         }
-    
+        
         // divide by num_traces to estimate <f(y_t)_i>
         double num_tracesf = num_traces;
         double ntraces_factor = 1/(num_tracesf);
@@ -450,13 +290,13 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-        printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+        printf("\nExecution time to simulate %d x %g s trace with dt = %g: %g s\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
 
     } else {  // not multithreading
         printf("Number of traces that will be generated: %d\n", num_traces);
         // generate single thread
-        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt);  
+        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt, args);  
         // divide by num_traces to estimate <f(y_t)_i(t)>
         double num_tracesf = num_traces;
         double ntraces_factor = 1/(num_tracesf);
@@ -465,7 +305,7 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-        printf("Execution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+        printf("\nExecution time to simulate %d x %g s trace with dt = %g: %g s\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
     }        
     return avg_trace;
@@ -474,10 +314,10 @@ std::vector<double> t_interval, std::vector<double> y0, double dt){
 // Print results   
 // avg trace number i (where i is degree of freedom number i) will be
 // printed on file ./simulated_traces/sde_sample_path_i.txt
-int print_results(int n_dim, std::vector<std::vector<double>> avg_trace){
+int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg_trace){
     std::vector<std::string> filename(n_dim);
     std::cout << "Average traces saved in files:\n";
-    for(int i = 0; i < n_dim; i++){
+    for(unsigned int i = 0; i < n_dim; i++){
         // generate new filename
         filename[i] = "./simulated_traces/sde_sample_path_" + std::to_string(i) + ".txt";
         std::cout << filename[i] << "\n";
@@ -485,7 +325,7 @@ int print_results(int n_dim, std::vector<std::vector<double>> avg_trace){
     
     // Print results of dimension dim to file
     // Notice that, by default, this APPENDS a new row to the file
-    for(int i = 0; i < n_dim; i++){
+    for(unsigned int i = 0; i < n_dim; i++){
         // open file
         FILE* fp = fopen(filename[i].c_str(), "a"); // <-- a for "append"
         if (fp == NULL) {
@@ -497,14 +337,15 @@ int print_results(int n_dim, std::vector<std::vector<double>> avg_trace){
         // Close file
         fclose(fp);
     }
+    printf("------------------------------------------\n");
     return 0;
 }
 
 // fill problem parameters with inputs, if given (otherwise use default
 // values)
 int fill_parameters_w_inputs(int argc, char* argv[], double &dt, 
-std::vector<double> &t_interval, int &num_traces, bool &many_traces, 
-int &n_dim, std::vector<double> &y0){
+std::vector<double> &t_interval, unsigned int &num_traces, bool &many_traces, 
+unsigned int &n_dim, std::vector<double> &y0){
     // dt: time step
     if(argc < 2){
         dt = 1e-5; // default value
@@ -544,7 +385,7 @@ int &n_dim, std::vector<double> &y0){
         y0 = {0, 0};
     } else {
         // read initial conditions
-        for(int i = 0; i < n_dim; i++){
+        for(unsigned int i = 0; i < n_dim; i++){
             y0[i] = atof(argv[6 + i]);
         }
     }
