@@ -58,7 +58,7 @@
 // dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
 // drift of process: a(t,Y)
 
-std::vector<double> drift_function(std::vector<double> y, double t, eq_params args){
+std::vector<double> drift_function(std::vector<double> y, double t, eq_params eq){
     // output vector
     std::vector<double> f(y.size(), 0);
     
@@ -70,14 +70,14 @@ std::vector<double> drift_function(std::vector<double> y, double t, eq_params ar
     
     // i.e., x' = v
     f[0] = v; 
-    f[1] = 0; //(-gamma_m*v + eps_m*std::cos(w*t)*x);//1/m*(-gamma*v + eps*std::cos(w*t)*x);
+    f[1] = -eq.ot.w*eq.ot.w*x - eq.ot.g_norm*v; //(-gamma_m*v + eps_m*std::cos(w*t)*x);//1/m*(-gamma*v + eps*std::cos(w*t)*x);
         
     // return output
     return f;
 }
 
 // diffusion of process: b(t, Y)
-std::vector<double> diffusion_function(std::vector<double> y, double t, eq_params args){
+std::vector<double> diffusion_function(std::vector<double> y, double t, eq_params eq){
     // output vector
     std::vector<double> f(y.size(), 0);
     
@@ -87,9 +87,9 @@ std::vector<double> diffusion_function(std::vector<double> y, double t, eq_param
     
     // Calculate force
     // No noise in x:
-    // f[0] = 0; -> but already 0 by initialization
+    f[0] = 0;
     // Stochastic force in momentum:
-    f[1] = args.ot.sigma/args.ot.m;
+    f[1] = eq.ot.sigma/eq.ot.m;
     
     // return output
     return f;
@@ -222,7 +222,7 @@ std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, eq
     
     // call RK method num_traces times
     runge_kutta(t_interval, y0, dt, y, args); 
-    avg_var = array_dot_product(y, y);
+    avg_var = function_array(y);
     for(unsigned int i = 1; i < num_traces; i++){
         runge_kutta(t_interval, y0, dt, y, args); 
         tmp1 = function_array(y);

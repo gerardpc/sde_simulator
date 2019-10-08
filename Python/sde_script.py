@@ -15,11 +15,11 @@
 
 import numerical_sde_cpp as sde
 
-dt = 1e-5 # seconds
-t_interval = [0, 1e-1]
-num_traces = 100
+dt = 1e-8 # seconds
+t_interval = [0, 1e-5]
+num_traces = 1
 n_dim = 2 # 2D: x and v
-initial_values = [0, 0] # start at origin
+initial_values = [50e-7, 0] # start at origin
 
 # call function
 sde.numerical_sde(dt, t_interval, num_traces, n_dim, initial_values)

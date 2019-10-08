@@ -58,6 +58,7 @@ tic;
 ini_t = toc;
 avg_var_x = importdata("./simulated_traces/sde_sample_path_0.txt");
 avg_var_v = importdata("./simulated_traces/sde_sample_path_1.txt");
+
 avg_var = [avg_var_x; avg_var_v];
 end_t = toc;
 fprintf("Elapsed time to import traces: %f s\n", end_t - ini_t);

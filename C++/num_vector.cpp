@@ -35,7 +35,7 @@
 // Function f(Y_t) that is applied to every trace and averaged to
 // estimate <f(Y_t)>
 double f(double x){
-    return x*x; // square function by default, to estimate variance
+    return x; // square function by default, to estimate variance
 }
 
 // C++ function that mimics MATLAB linspace
@@ -73,7 +73,7 @@ std::vector<std::vector<double>> ini_matrix(int n_arrays, int n_columns, double 
 int print_array(const std::vector<std::vector <double>> a, std::FILE* fp) {
     for(unsigned int i = 0; i < a.size(); i++){
         for(unsigned int j = 0; j < a[0].size(); j++){
-            fprintf(fp, "%.10f ", a[i][j]);
+            fprintf(fp, "%.15e ", a[i][j]);
         }
         fprintf(fp, "\n");
     }
@@ -83,7 +83,7 @@ int print_array(const std::vector<std::vector <double>> a, std::FILE* fp) {
 // C++ function to print array on stdout
 int print_array_asrow(const std::vector<std::vector <double>> a, unsigned int dim, std::FILE* fp) {
     for(unsigned int i = 0; i < a.size(); i++){
-        fprintf(fp, "%.10f ", a[i][dim]);
+        fprintf(fp, "%.15e ", a[i][dim]);
     }
     fprintf(fp, "\n");
     return 0;
@@ -92,7 +92,7 @@ int print_array_asrow(const std::vector<std::vector <double>> a, unsigned int di
 // C++ function to print vector on stdout
 int print_vector(const std::vector<double> v, std::FILE* fp) {
     for(unsigned int i = 0; i < v.size(); i++){
-        fprintf(fp, "%f\n", v[i]);
+        fprintf(fp, "%e\n", v[i]);
     }
     return 0;
 }

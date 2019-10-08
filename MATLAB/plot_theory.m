@@ -8,11 +8,10 @@ function[] = plot_theory(tt)
 
 % Compare with theory
 % Experimental parameters
-m = 9.2e-18;
-gamma = 3.5e-11;
+m = 1.495e-17;
+gamma = 4.075e-11;
 T = 295;
 k_B = 1.38065e-23;
-eps = 6.3e-9;
 sigma_noise = sqrt(2*k_B*T*gamma);
 
 % Plot variance expression
