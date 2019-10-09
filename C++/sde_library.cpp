@@ -29,7 +29,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  04.10.2019
+ *  09.10.2019
  *      Obs: Working library. Prints on a file estimated <x^2(t)>. This
  *      function can be changed (defined in num_vector.hpp as
  *      "double f(double x)".
@@ -43,7 +43,6 @@
 #include <vector> // vector library
 #include <string> // string library
 #include <random> // random number generation
-#include <stdlib.h> // includes rand()
 #include <chrono> // time related library, for seeeding
 #include <thread> // for multithreading
 
@@ -58,7 +57,7 @@
 // dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
 // drift of process: a(t,Y)
 
-std::vector<double> drift_function(std::vector<double> y, double t, eq_params eq){
+std::vector<double> drift_function(std::vector<double> y, double t, const eq_params &eq){
     // output vector
     std::vector<double> f(y.size(), 0);
     
@@ -69,7 +68,7 @@ std::vector<double> drift_function(std::vector<double> y, double t, eq_params eq
     // Definitions: experimental parameters
     
     // i.e., x' = v
-    f[0] = v; 
+    f[0] =  v;
     f[1] = -eq.ot.w*eq.ot.w*x - eq.ot.g_norm*v; //(-gamma_m*v + eps_m*std::cos(w*t)*x);//1/m*(-gamma*v + eps*std::cos(w*t)*x);
         
     // return output
@@ -77,7 +76,7 @@ std::vector<double> drift_function(std::vector<double> y, double t, eq_params eq
 }
 
 // diffusion of process: b(t, Y)
-std::vector<double> diffusion_function(std::vector<double> y, double t, eq_params eq){
+std::vector<double> diffusion_function(std::vector<double> y, double t, const eq_params &eq){
     // output vector
     std::vector<double> f(y.size(), 0);
     
@@ -111,7 +110,8 @@ void eq_params::fill(){
 // Runge-Kutta function: numerical code.
 // output in y
 void runge_kutta(std::vector<double> t_interval,
-std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, eq_params args){
+std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, 
+bool Ito, const eq_params &args){
     
     // PARAMETERS AND INITIALIZATION
     // generate time vector
@@ -124,8 +124,6 @@ std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, eq_param
     // initialize y with initial conditions as y(0,:) = y0
     y[0] = y0;
     
-    // S_k for the runge_kutta method
-    std::vector<double> sk_vec{-1, 1};
     srand (time(NULL)); // initialize random seed:
     double S_k;
     
@@ -150,12 +148,20 @@ std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, eq_param
         for(unsigned int i = 0; i < dW_t.size(); i++){
             dW_t[i] = n_distribution(generator)*sqrt(dt);
         }
-        
+        y[n] = vector_sum(y[n - 1], tmp1);
         // calculate S_k
-        S_k = sk_vec[roll_dice(0,1)];
+        if(Ito){ // Ito case
+            if(n_distribution(generator) >= 0){
+                S_k = 1;
+            } else {
+                S_k = -1;
+            }
+        } else { // Stratonovich case
+            S_k = 0;
+        }
         
         // Calculate k_1
-        tmp1 = drift_function(y.back(), t[n - 1], args);
+        tmp1 = drift_function(y[n - 1], t[n - 1], args);
         tmp1 = scalar_multiplication(tmp1, dt);
 
         for(unsigned int i = 0; i < dW_t.size(); i++){
@@ -191,7 +197,8 @@ std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, eq_param
 // Generate num_traces traces with the RK method and print 
 // each of them to file in different rows
 void generate_traces(unsigned int num_traces, std::string filename, 
-std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params args){
+std::vector<double> t_interval, std::vector<double> y0, double dt, 
+unsigned int subsampling_f, bool Ito, const eq_params &args){
     // open to write to file
     FILE* fp = fopen(filename.c_str(), "a");
     if (fp == NULL) {
@@ -202,9 +209,9 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
     std::vector<std::vector<double>> y;
     // call RK method num_traces times
     for(unsigned int i = 0; i < num_traces; i++){
-        runge_kutta(t_interval, y0, dt, y, args);  
+        runge_kutta(t_interval, y0, dt, y, Ito, args);  
         // Print results to file 
-        print_array_asrow(y, 0, fp);
+        print_array_asrow(y, 0, subsampling_f, fp);
     }
     // Close file and exit
     fclose(fp);
@@ -214,17 +221,18 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
 // sum of function <f(Y_t)> (Obs: remains to divide by num_traces
 // to estimate average)
 void generate_avg_trace(unsigned int num_traces, std::vector<double> t_interval, 
-std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, eq_params args){
+std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, 
+bool Ito, const eq_params &args){
 
     // preallocate solution vector y and tmp1 vector
     std::vector<std::vector<double>> y;
     std::vector<std::vector<double>> tmp1;
     
     // call RK method num_traces times
-    runge_kutta(t_interval, y0, dt, y, args); 
+    runge_kutta(t_interval, y0, dt, y, Ito, args); 
     avg_var = function_array(y);
     for(unsigned int i = 1; i < num_traces; i++){
-        runge_kutta(t_interval, y0, dt, y, args); 
+        runge_kutta(t_interval, y0, dt, y, Ito, args); 
         tmp1 = function_array(y);
         avg_var = array_sum(avg_var, tmp1);
     }
@@ -235,7 +243,7 @@ std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, eq
 // Print elapsed time for execution on stdout. Returns average
 // of f(Y_t)
 std::vector<std::vector<double>> RK_all(unsigned int num_traces, bool many_traces, 
-std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params args){
+std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, const eq_params &args){
     // measure initial time
     auto start = std::chrono::high_resolution_clock::now(); 
     
@@ -248,6 +256,12 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
     unsigned num_threads = num_cores - 1;
     printf("------------------------------------------\n");
     printf("Detected number of cores: %d\n", num_cores);
+    
+    if(Ito){
+        printf("Equation of type: Ito\n");
+    } else {
+        printf("Equation of type: Stratonovich\n");
+    }
     
     // preallocate average of f(x) trace vectors 
     std::vector<std::vector<double>> avg_trace;
@@ -266,11 +280,11 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
         
         // initiate simulations in threads
         for(unsigned int i = 0; i < num_threads; i++){
-            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt, args));
+            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt, Ito, args));
         }
         
         // run 1 more simulation in main
-        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt, args);  
+        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt, Ito, args);  
     
         // join threads when they finish
         for(unsigned int i = 0; i < num_threads; i++){
@@ -290,13 +304,13 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-        printf("\nExecution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+        printf("\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
 
     } else {  // not multithreading
         printf("Number of traces that will be generated: %d\n", num_traces);
         // generate single thread
-        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt, args);  
+        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt, Ito, args);  
         // divide by num_traces to estimate <f(y_t)_i(t)>
         double num_tracesf = num_traces;
         double ntraces_factor = 1/(num_tracesf);
@@ -305,7 +319,7 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-        printf("\nExecution time to simulate %d x %g s trace with dt = %g: %g s\n", 
+        printf("\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
     }        
     return avg_trace;
@@ -314,7 +328,8 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, eq_params arg
 // Print results   
 // avg trace number i (where i is degree of freedom number i) will be
 // printed on file ./simulated_traces/sde_sample_path_i.txt
-int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg_trace){
+int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg_trace,
+unsigned int subsampling_f){
     std::vector<std::string> filename(n_dim);
     std::cout << "Average traces saved in files:\n";
     for(unsigned int i = 0; i < n_dim; i++){
@@ -333,7 +348,7 @@ int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg
           exit(1);
         }
         // print to file
-        print_array_asrow(avg_trace, i, fp);    
+        print_array_asrow(avg_trace, i, subsampling_f, fp);    
         // Close file
         fclose(fp);
     }
@@ -345,13 +360,14 @@ int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg
 // values)
 int fill_parameters_w_inputs(int argc, char* argv[], double &dt, 
 std::vector<double> &t_interval, unsigned int &num_traces, bool &many_traces, 
-unsigned int &n_dim, std::vector<double> &y0){
+unsigned int &subsampling_f, bool &Ito, unsigned int &n_dim, std::vector<double> &y0){
     // dt: time step
     if(argc < 2){
         dt = 1e-5; // default value
     } else {
         dt = atof(argv[1]); // input value
     }
+    
     // time interval
     if(argc < 3){ 
         t_interval = {0, 1e-1}; // default value
@@ -359,6 +375,7 @@ unsigned int &n_dim, std::vector<double> &y0){
         t_interval = {atof(argv[2]), atof(argv[3])}; // input value
     }
 
+    // number of traces
     if(argc < 5){ 
         num_traces = 100; // default value
     } else {
@@ -371,22 +388,38 @@ unsigned int &n_dim, std::vector<double> &y0){
             many_traces = true;
         }
     }
-    // problem dimension
+
+    // subsampling factor
     if(argc < 6){ 
+        subsampling_f = 1; // don't do any subsampling when printing results
+    } else {
+        subsampling_f = atoi(argv[5]); // input value
+    }
+    
+    // Ito or Stratonovich
+    if(argc < 7){ 
+        Ito = true; // Ito by default
+    } else {
+        Ito = atoi(argv[6]); // input value
+    }
+    
+    // problem dimension
+    if(argc < 8){ 
         n_dim = 2; // 2D problem, think of x and v.
     } else {
-        n_dim = atoi(argv[5]); // input value
-    }
+        n_dim = atoi(argv[7]); // input value
+    }    
+        
     // initial conditions, if given
     std::vector<double> v_zeros(n_dim);
     y0 = v_zeros;
-    if(argc < 6){ 
+    if(argc < 8){ 
         // default: initial conditions = 0
         y0 = {0, 0};
     } else {
         // read initial conditions
         for(unsigned int i = 0; i < n_dim; i++){
-            y0[i] = atof(argv[6 + i]);
+            y0[i] = atof(argv[8 + i]);
         }
     }
     return 0;

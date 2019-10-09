@@ -15,5 +15,20 @@ k_B = 1.38065e-23;
 sigma_noise = sqrt(2*k_B*T*gamma);
 
 % Plot variance expression
-nice_plot(tt, (sigma_noise/m)^2*tt, "", "", "");
+% nice_plot(tt, (sigma_noise/m)^2*tt, "", "", "");
+
+% Stochastic harmonic oscillator, 2nd order
+C = (110e3*2*pi)^2;
+A = gamma/m;
+B = sigma_noise/m;
+C2 = (C - A^2/4)
+
+% f(1) = v; 
+% f(2) = -C*x - A*v;
+% sigma = [0; B]
+
+% Then, variance of x will be
+var_short = B^2/(2*A*C)*(1 - exp(-A*tt).*(C/C2 - A^2/(4*C2)*cos(2*sqrt(C2)*tt) + A/(2*sqrt(C2))*sin(2*sqrt(C2)*tt)));
+nice_plot(tt, var_short, "", "", "");
+
 end

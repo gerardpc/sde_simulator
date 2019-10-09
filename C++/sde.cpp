@@ -18,14 +18,20 @@
  *          inp2: t_ini, initial time. Type: double
  *          inp3: t_end, final time. Type: double
  *          inp4: num_traces, number of traces to simulate. Type: int
- *                Obs: needs to be num_traces%4 = 0
- *          inp5: n_dim, number of dimensions; e.g., harmonic oscillator
+ *                Obs: needs to be num_traces%4 = 0 
+ *          inp5: subsampling_f: even though N points will be generated
+ *                per trace, print only N/10 points. Helps when small dt 
+ *                is required for numerical stability, but the equations 
+ *                can be well represented with less points (i.e., big
+ *                speed-up in importing data to MATLAB/Python). Type: int
+ *          inp6: Ito: selects Ito or Stratonovich equation. Type: bool
+ *          inp7: n_dim, number of dimensions; e.g., harmonic oscillator
  *                would be 2. Type: int
- *          inp6: y0[0], 1st initial condition. Type: double
- *          inp7: y0[1], 2nd initial condition. Type: double. More inputs
- *                if n_dim is larger.
+ *          inp8: y0[0], 1st initial condition. Type: double
+ *          inp9: y0[1], 2nd initial condition. Type: double. 
+ *                More inputs for y0 if n_dim is larger.
  *          E.g:
- *          ./sde.out 1e-5 0 1e-1 100 2 0 0
+ *          ./sde.out 1e-5 0 1e-1 100 1 2 0 0
  * 
  * OUTPUTS: Prints elapsed time and other details on stdout. 
  *          Prints sample traces as rows in files
@@ -52,7 +58,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  08.10.2019
+ *  09.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster with 4 cores. Automatically adapts to number of cores.
@@ -80,6 +86,10 @@ int main(int argc, char* argv[]){
     // number of traces to simulate
     unsigned int num_traces;
     bool many_traces; // true if num_traces >= 4
+    // Subsampling factor
+    unsigned int subs_f;
+    // Ito (true) or Stratonovich (false)?
+    bool Ito;
     // problem dimension (e.g., for a harm. oscillator = 2) 
     unsigned int n_dim;
     // initial conditions, if given
@@ -88,20 +98,21 @@ int main(int argc, char* argv[]){
     // Fill problem parameters with inputs, if given.
     // Otherwise use default values: dt = 1e-5, t_interval = [0 1e-1],
     // num_traces = 100
-    fill_parameters_w_inputs(argc, argv, dt, t_interval, num_traces, many_traces, n_dim, y0);
+    fill_parameters_w_inputs(argc, argv, dt, t_interval, num_traces, many_traces, subs_f, Ito, n_dim, y0);
 
     //==================================================================
     // import trap equations from files in eq_params folder
     eq_params trap;
     trap.fill();
+
     // call RK method. Put <f(Y_t)> on avg_trace
-    vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt, trap);
+    vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt, Ito, trap);
     
     //==================================================================    
     // Print results   
     // avg trace number i (where i is degree of freedom number i) will be
     // printed on file ./simulated_traces/sde_sample_path_i.txt
-    print_results(n_dim, avg_trace);
+    print_results(n_dim, avg_trace, subs_f);
     
     //==================================================================    
     // Finish execution    

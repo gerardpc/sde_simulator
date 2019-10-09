@@ -41,7 +41,8 @@ std::vector<std::vector<double>> ini_matrix(int n_arrays, int n_columns, double 
 int print_array(const std::vector<std::vector <double>> a, std::FILE* fp);
 
 // C++ function to print array on stdout
-int print_array_asrow(const std::vector<std::vector <double>> a, unsigned int dim, std::FILE* fp);
+int print_array_asrow(const std::vector<std::vector <double>> a, unsigned int dim, 
+unsigned int subsampling_f, std::FILE* fp);
 
 // C++ function to print vector on stdout
 int print_vector(const std::vector<double> v, std::FILE* fp);

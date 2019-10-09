@@ -35,7 +35,7 @@
 // Function f(Y_t) that is applied to every trace and averaged to
 // estimate <f(Y_t)>
 double f(double x){
-    return x; // square function by default, to estimate variance
+    return x*x; // square function by default, to estimate variance
 }
 
 // C++ function that mimics MATLAB linspace
@@ -81,8 +81,9 @@ int print_array(const std::vector<std::vector <double>> a, std::FILE* fp) {
 }
 
 // C++ function to print array on stdout
-int print_array_asrow(const std::vector<std::vector <double>> a, unsigned int dim, std::FILE* fp) {
-    for(unsigned int i = 0; i < a.size(); i++){
+int print_array_asrow(const std::vector<std::vector <double>> a, unsigned int dim, 
+unsigned int subsampling_f, std::FILE* fp) {
+    for(unsigned int i = 0; i < a.size(); i = i + subsampling_f){
         fprintf(fp, "%.15e ", a[i][dim]);
     }
     fprintf(fp, "\n");
