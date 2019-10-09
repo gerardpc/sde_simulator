@@ -7,7 +7,7 @@ stochastic process, defined by the SDE
 
 dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0
 
-and where Y has arbitrary (but finite!) dimension.
+and where Y has arbitrary (but finite) dimension.
 
 A typical application would be generating n sample paths Y_t, computing
 a certain function of them f(Y_t) and then averaging the result, to find 
@@ -19,6 +19,9 @@ that does not require any non-zero derivatives of b (diffusion term).
 Other methods (e.g. the Milstein method) have strong order 1 but reduce
 to the Euler-Maruyama method (strong order 0.5) when b is a constant.
 
+The method allows choosing between Ito or Stratonovich interpretations of
+the SDE.
+
 The code is divided in two parts:
 
 - A C++ main() + library functions for the most numerically intensive 
@@ -28,12 +31,13 @@ main calculates (by default) the VARIANCE, i.e. f(Y_t) = Y_t^2, and not
 any arbitrary function. The function which expected value is calculated
 is defined in sde_library.cpp as "double f(double f)" and can be changed
 to any other function the user wants to define.
-The code uses multithreading and assumes a computer with 4 cores.
+The code uses multithreading (detects number of cores and adapts number of
+threads).
 
 - MATLAB and Python scripts to load the saved trace and plot the results.
 
-In my personal computer, this code boosts the performance (i.e., reduces
-execution time) a factor 500 with respect to equivalent code implemented
+In my personal computer, this code boosted the performance (reduction of
+execution time) a factor ~1000 with respect to equivalent code implemented
 100% in MATLAB.
 
 Everything is well commented, so you should be able to modify the code 
@@ -65,7 +69,7 @@ Open a terminal, go to the C++ folder
 
 Compile the code with the following command
 
-    >> g++ sde.cpp sde_library.cpp -o sde.out -O3 -pthread
+    >> g++ sde.cpp sde_library.cpp num_vector.cpp particle_traps.cpp -o sde.out -O3 -pthread
 
 
 2- Generate traces and plot the results
@@ -75,7 +79,7 @@ If you are working with MATLAB:
 Open MATLAB, go to the MATLAB folder. Call the function "numerical_sde_cpp".
 If you inspect the code, all the inputs and outputs are detailed. E.g.
 
-    >> [tt, avg_var] = numerical_sde_cpp(1e-5, [0 1], 100, 2, [0 0]);
+    >> [tt, avg_var] = numerical_sde_cpp(1e-5, [0 1], 100, 1, 1 2, [0 0]);
 
 The results will be plotted in different figures.
 
@@ -115,10 +119,10 @@ C++ code should be recompiled with the command indicated in section 1.
 
 3- Changing the function f(x) that is used in the expected value, <f(Y_t)>
 --------------
-The f(Y_t) function is defined in the file sde_library.cpp as
+The f(Y_t) function is defined in the file num_vector.cpp as
 "double f(double x)". Replacing the function, which by default returns 
-"return x*x;" (to calculate the variance) is straightforward. Just remember
-to write it in C++.
+"return x*x;" (to calculate the variance) by any other is straightforward.
+Just remember to write it in C++.
 
 > By: Gerard Planes Conangla
 
