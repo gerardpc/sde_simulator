@@ -63,7 +63,8 @@ void paul_trap::print(){
     printf("V: %.4e\n", V);
     printf("d: %.4e\n", d);
     printf("eps: %.4e\n", eps);
-    printf("beta: %.4e\n", beta);
+    printf("alpha_iz: %.4e\n", alpha_iz);
+    printf("beta_iz: %.4e\n", beta_iz);
     printf("T: %.4e\n", T);
     printf("pressure: %.4e\n", pressure);
     printf("gamma_ambient: %.4e\n", gamma_ambient);
@@ -79,7 +80,11 @@ void opt_tweezer::print(){
     printf("n: %.4e\n", n);
     printf("alpha: %.4e\n", alpha);
     printf("freq: %.4e\n", freq);
-    printf("w: %.4e\n", w);
+    printf("w: %.4e\n", w);    
+    printf("f_r GB: %.4e\n", f_gb_r);
+    printf("w_r GB: %.4e\n", w_gb_r);
+    printf("f_z GB: %.4e\n", f_gb_z);
+    printf("w_z GB: %.4e\n", w_gb_z);
     printf("T: %.4e\n", T);
     printf("pressure: %.4e\n", pressure);
     printf("gamma_ambient: %.4e\n", gamma_ambient);
@@ -116,7 +121,7 @@ void gaussian_beam::fill(){
     NA = file_values[2]; // Gaussian beam NA
     
     // numerical details    
-    double c_factor = 1.5; // correction factor for high NA in Gaussian beam (set to "1" to eliminate correction)
+    c_factor = 1.5; // correction factor for high NA in Gaussian beam (set to "1" to eliminate correction)
     
     // Gaussian beam
     w_0 = lambda/(M_PI*NA)*c_factor;
@@ -164,8 +169,9 @@ void paul_trap::fill(){
     g_norm = gamma/m;
     sigma = sqrt(2*k_B*T*gamma);
     
-    // value of beta, as defined in Iz. et al PRE 1995
-    beta = 4*Q*V*1.602e-19/(m*pow(d*w_dr, 2));
+    // value of alpha, beta, as defined in Iz. et al PRE 1995
+    alpha_iz = 2*gamma/(m*w_dr);
+    beta_iz = 4*Q*V*1.602e-19/(m*pow(d*w_dr, 2));
 }
 
 void opt_tweezer::fill(){
@@ -205,6 +211,17 @@ void opt_tweezer::fill(){
     sigma = sqrt(2*k_B*T*gamma);
 }
 
+// calculate frequencies from Gaussian Beam
+// ref: Gerard's theory notes
+void opt_tweezer::fill_gb_w(gaussian_beam &gb){        
+    double k_r = 2*M_PI*pow(r,3)/gb.c*(n*n - 1)/(n*n + 2)*8*gb.P_0/M_PI*pow(M_PI*gb.NA/(gb.lambda*gb.c_factor), 4);
+    double k_z = 2*M_PI*pow(r,3)/gb.c*(n*n - 1)/(n*n + 2)*4*gb.P_0*pow(gb.lambda*gb.c_factor, 2)/pow(M_PI,3)*pow(M_PI*gb.NA/(gb.lambda*gb.c_factor), 6);
+    w_gb_r = pow(k_r/m, 0.5);
+    w_gb_z = pow(k_z/m, 0.5);
+    f_gb_r = w_gb_r/(2*M_PI);
+    f_gb_z = w_gb_z/(2*M_PI);
+}
+
 //======================================================================
 // FIELD FUNCTIONS
 //======================================================================
@@ -215,41 +232,51 @@ double particle_mass(double r, double density){
 }
 
 // Gaussian beam width
-double gb_w(double z, gaussian_beam &gb){
+double gb_w(double z, const gaussian_beam &gb){
     return gb.w_0*sqrt(1 + pow((z/gb.z_R), 2));
 }
 
-// Gaussiain beam intensity
-double gb_I(double r, double z, gaussian_beam &gb){
+// Gaussian beam intensity
+double gb_I(double r, double z, const gaussian_beam &gb){
     return gb.I_0*pow((gb.w_0/gb_w(z, gb)),2)*exp(-(2*pow(r/gb_w(z, gb), 2)));
 }
 
 // Intensity gradient in the r direction
-double grad_I_r(double r, double z, gaussian_beam &gb, double h){
+double grad_I_r(double r, double z, const gaussian_beam &gb, double h){
     return (1./12.*gb_I(r-2*h, z, gb) - 2./3.*gb_I(r-h, z, gb) 
     + 2./3.*gb_I(r+h, z, gb) - 1./12.*gb_I(r+2*h, z, gb))/h;
 }
 
 // Intensity gradient in the z direction
-double grad_I_z(double r, double z, gaussian_beam &gb, double h){
+double grad_I_z(double r, double z, const gaussian_beam &gb, double h){
     return (1./12.*gb_I(r, z-2*h, gb) - 2./3.*gb_I(r, z-h, gb)
     + 2./3.*gb_I(r, z+h, gb) - 1./12.*gb_I(r, z+2*h, gb))/h;
 }
 
+// Field square gradient in the r direction
+double grad_E2_r(double r, double z, const gaussian_beam &gb, double h){
+    return grad_I_r(r,z,gb,h)/(gb.c*gb.eps_0);
+}
+
+// Field square gradient in the z direction
+double grad_E2_z(double r, double z, const gaussian_beam &gb, double h){
+    return grad_I_z(r,z,gb,h)/(gb.c*gb.eps_0);
+}
+
 // Dipole force f_r(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
-double force_r_gb(double r, double z, double alpha, gaussian_beam &gb, double h){
-    return 1./2.*alpha*grad_I_r(r,z,gb,h);
+double force_r_gb(double r, double z, double alpha, const gaussian_beam &gb, double h){
+    return 1./2.*alpha*grad_E2_r(r,z,gb,h);
 }
 
 // Dipole force f_z(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
-double force_z_gb(double r, double z, double alpha, gaussian_beam &gb, double h){
-    return 1./2.*alpha*grad_I_z(r,z,gb,h);
+double force_z_gb(double r, double z, double alpha, const gaussian_beam &gb, double h){
+    return 1./2.*alpha*grad_E2_z(r,z,gb,h);
 }
 
 // paul trap force field
-double force_paul_trap(double x, double t, paul_trap &pt){
+double force_paul_trap(double x, double t, const paul_trap &pt){
     return (pt.eps*cos(pt.w_dr*t)*x);
 }
 

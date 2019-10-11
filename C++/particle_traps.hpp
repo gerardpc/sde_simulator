@@ -38,6 +38,7 @@ struct gaussian_beam{
     double c = 3e8;  // speed of light
     double eps_0 = 8.854e-12; // vacuum diel. permittivity
     // laser/lens parameters
+    double c_factor;
     double lambda;
     double P_0;
     double NA;
@@ -64,7 +65,8 @@ struct paul_trap{
     double V;
     double d;
     double eps;
-    double beta;
+    double alpha_iz;
+    double beta_iz;
     // ambient parameters
     double T; 
     double pressure;
@@ -84,9 +86,14 @@ struct opt_tweezer{
     double m;
     double n;
     double alpha;
-    // trap parameters
+    // trap parameters from file
     double freq;
     double w;
+    // trap parameters from gaussian beam
+    double f_gb_r;
+    double w_gb_r;
+    double f_gb_z;
+    double w_gb_z;
     // ambient parameters
     double T; 
     double pressure;
@@ -96,6 +103,7 @@ struct opt_tweezer{
     double sigma;
     void print(); // print values
     void fill(); // constructor
+    void fill_gb_w(gaussian_beam &gb); // calculate frequencies from GB
 };
 
 //======================================================================
@@ -106,27 +114,33 @@ struct opt_tweezer{
 double particle_mass(double r, double density);
 
 // Gaussian beam width
-double gb_w(double z, gaussian_beam &gb);
+double gb_w(double z, const gaussian_beam &gb);
 
 // Gaussiain beam intensity
-double gb_I(double r, double z, gaussian_beam &gb);
+double gb_I(double r, double z, const gaussian_beam &gb);
 
 // Intensity gradient in the r direction
-double grad_I_r(double r, double z, gaussian_beam &gb, double h);
+double grad_I_r(double r, double z, const gaussian_beam &gb, double h);
 
 // Intensity gradient in the z direction
-double grad_I_z(double r, double z, gaussian_beam &gb, double h);
+double grad_I_z(double r, double z, const gaussian_beam &gb, double h);
+
+// Field square gradient in the r direction
+double grad_E2_r(double r, double z, const gaussian_beam &gb, double h);
+
+// Field square gradient in the z direction
+double grad_E2_z(double r, double z, const gaussian_beam &gb, double h);
 
 // Dipole force f_r(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
-double force_r_gb(double r, double z, double alpha, gaussian_beam &gb, double h);
+double force_r_gb(double r, double z, double alpha, const gaussian_beam &gb, double h);
 
 // Dipole force f_z(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
-double force_z_gb(double r, double z, double alpha, gaussian_beam &gb, double h);
+double force_z_gb(double r, double z, double alpha, const gaussian_beam &gb, double h);
 
 // paul trap force field
-double force_paul_trap(double x, double t, paul_trap &pt);
+double force_paul_trap(double x, double t, const paul_trap &pt);
 
 
 

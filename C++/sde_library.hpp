@@ -88,7 +88,7 @@ unsigned int subsampling_f, bool Ito, const eq_params &args);
 // outside this function to get average!
 void generate_avg_trace(unsigned int num_traces, std::vector<double> t_interval, 
 std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, 
-bool Ito, const eq_params &args);
+bool Ito, const eq_params &args, unsigned int thread_id);
     
 // Generate num_traces traces with generate_avg_trace in 1 or 4 different
 // threads. Print elapsed time for execution on stdout. Returns average

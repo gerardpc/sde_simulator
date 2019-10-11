@@ -67,9 +67,13 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     
     // Definitions: experimental parameters
     
-    // i.e., x' = v
+    // x' = v
     f[0] =  v;
-    f[1] = -eq.ot.w*eq.ot.w*x - eq.ot.g_norm*v; //(-gamma_m*v + eps_m*std::cos(w*t)*x);//1/m*(-gamma*v + eps*std::cos(w*t)*x);
+    // v' = ...
+    //f[1] = force_r_gb(x, 0, eq.ot.alpha, eq.gb, 1e-5*eq.ot.r)/eq.ot.m - eq.ot.g_norm*v;
+    //f[1] = -pow(eq.ot.w_gb_r, 2)*x - eq.ot.g_norm*v; 
+    //f[1] = - eq.ot.g_norm*v; 
+    f[1] = -eq.pt.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.pt.m;
         
     // return output
     return f;
@@ -88,7 +92,7 @@ std::vector<double> diffusion_function(std::vector<double> y, double t, const eq
     // No noise in x:
     f[0] = 0;
     // Stochastic force in momentum:
-    f[1] = eq.ot.sigma/eq.ot.m;
+    f[1] = eq.pt.sigma/eq.pt.m;
     
     // return output
     return f;
@@ -99,9 +103,10 @@ std::vector<double> diffusion_function(std::vector<double> y, double t, const eq
 // Equation parameters struct constructor
 //======================================================================
 void eq_params::fill(){
+    gb.fill();
     ot.fill();
     pt.fill();
-    gb.fill();
+    ot.fill_gb_w(gb);
 }
 
 //======================================================================
@@ -222,8 +227,7 @@ unsigned int subsampling_f, bool Ito, const eq_params &args){
 // to estimate average)
 void generate_avg_trace(unsigned int num_traces, std::vector<double> t_interval, 
 std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, 
-bool Ito, const eq_params &args){
-
+bool Ito, const eq_params &args, unsigned int thread_id){
     // preallocate solution vector y and tmp1 vector
     std::vector<std::vector<double>> y;
     std::vector<std::vector<double>> tmp1;
@@ -231,10 +235,37 @@ bool Ito, const eq_params &args){
     // call RK method num_traces times
     runge_kutta(t_interval, y0, dt, y, Ito, args); 
     avg_var = function_array(y);
-    for(unsigned int i = 1; i < num_traces; i++){
-        runge_kutta(t_interval, y0, dt, y, Ito, args); 
-        tmp1 = function_array(y);
-        avg_var = array_sum(avg_var, tmp1);
+    if(thread_id == 0){ // main thread, print progress
+        unsigned int progress;
+        unsigned int last_progress = 0;
+        // Print progress bar
+        std::cout << "\nProgress:\n";
+        std::cout << "0 " << std::flush;
+        // Calculate rest of traces
+        for(unsigned int i = 1; i < num_traces; i++){
+            runge_kutta(t_interval, y0, dt, y, Ito, args); 
+            tmp1 = function_array(y);
+            avg_var = array_sum(avg_var, tmp1);
+            progress = ((i + 1)*50)/num_traces; 
+            if(progress > last_progress){
+                for(unsigned int diff = 0; diff < progress - last_progress; diff++){
+                    std::cout << "#";
+                }
+                std::cout << " " << progress*2 << "%" << std::flush;
+                if(progress*2 < 10){
+                    std::cout << "\b\b\b";
+                } else if(progress*2 < 100) {                        
+                    std::cout << "\b\b\b\b";
+                }
+                last_progress = progress;
+            }
+        }
+    } else { // not main thread, do not print
+        for(unsigned int i = 1; i < num_traces; i++){
+            runge_kutta(t_interval, y0, dt, y, Ito, args); 
+            tmp1 = function_array(y);
+            avg_var = array_sum(avg_var, tmp1);
+        }
     }
 }
 
@@ -280,11 +311,11 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, con
         
         // initiate simulations in threads
         for(unsigned int i = 0; i < num_threads; i++){
-            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt, Ito, args));
+            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt, Ito, args, i + 1));
         }
         
         // run 1 more simulation in main
-        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt, Ito, args);  
+        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt, Ito, args, 0);  
     
         // join threads when they finish
         for(unsigned int i = 0; i < num_threads; i++){
@@ -304,13 +335,13 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, con
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-        printf("\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n", 
+        printf("\n\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
 
     } else {  // not multithreading
         printf("Number of traces that will be generated: %d\n", num_traces);
         // generate single thread
-        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt, Ito, args);  
+        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt, Ito, args, 0);  
         // divide by num_traces to estimate <f(y_t)_i(t)>
         double num_tracesf = num_traces;
         double ntraces_factor = 1/(num_tracesf);

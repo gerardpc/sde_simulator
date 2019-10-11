@@ -35,7 +35,7 @@
 // Function f(Y_t) that is applied to every trace and averaged to
 // estimate <f(Y_t)>
 double f(double x){
-    return x*x; // square function by default, to estimate variance
+    return pow(x,2); // square function by default, to estimate variance
 }
 
 // C++ function that mimics MATLAB linspace

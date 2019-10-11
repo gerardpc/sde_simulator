@@ -104,7 +104,7 @@ int main(int argc, char* argv[]){
     // import trap equations from files in eq_params folder
     eq_params trap;
     trap.fill();
-
+    
     // call RK method. Put <f(Y_t)> on avg_trace
     vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt, Ito, trap);
     
