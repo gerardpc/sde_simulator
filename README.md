@@ -14,7 +14,8 @@ a certain function of them f(Y_t) and then averaging the result, to find
 the expected value of f(Y_t). The most common case is calculating the 2nd 
 moment, the variance of Y(t): <Y^2(t)>.
 
-The code uses a stochastic Runge-Kutta type method of strong order 1
+The code uses a stochastic Runge-Kutta type method of strong order 1 (in 
+the presence of noise) and deterministic order 2 (i.e., for zero noise) 
 that does not require any non-zero derivatives of b (diffusion term).
 Other methods (e.g. the Milstein method) have strong order 1 but reduce
 to the Euler-Maruyama method (strong order 0.5) when b is a constant.
@@ -123,6 +124,39 @@ The f(Y_t) function is defined in the file num_vector.cpp as
 "double f(double x)". Replacing the function, which by default returns 
 "return x*x;" (to calculate the variance) by any other is straightforward.
 Just remember to write it in C++.
+
+4- If you want to use this code to simulate Brownian particles...
+--------------
+The code is specifically designed to be easy to do that (although of 
+course it is not mandatory; any drift/diffusion functions can be used). 
+You should use the struct "eq_params", defined in sde_library.cpp/sde_library.hpp,
+which uses the parameters defined in the folder "eq_params" and the functions 
+and struct members from particle_traps.cpp and particle_traps.hpp.
+The values from this struct can then be used to define the drift and diffusion,
+since eq_params is passed as one of the function parameters.
+
+eq_params has five substructs:
+
+1. Gaussian beam: defines a Gaussian beam parameters. Its values can be
+modified in ./eqp_params/gaussian_beam.txt.
+
+2. Particle: defines the trapped particle parameters. Its values can be
+modified in ./eqp_params/particle.txt.
+
+3. Thermodynamics: defines the thermodynamical parameters. Its values can be
+modified in ./eqp_params/thermodynamics.txt.
+
+4. Optical trap: defines the optical dipole trap parameters. Its values can be
+modified in ./eqp_params/optical_trap.txt.
+
+5. Paul trap: defines the Paul trap parameters. Its values can be
+modified in ./eqp_params/paul_trap.txt.
+
+Since the parameters are imported from files, the values can be modified
+without the need to recompile the code every time. 
+
+More details can be found by inspecting the struct definitions in 
+particle_traps.cpp/particle_traps.hpp
 
 > By: Gerard Planes Conangla
 
