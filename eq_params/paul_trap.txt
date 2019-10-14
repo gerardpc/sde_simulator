@@ -1,9 +1,3 @@
-r 117.5e-9 radius_particle
-density 2200 kg/m^3_for_silica
-refractive_index 1.43 c/v
-dr_freq 20e3 Hz
-temperature 295 K
-pressure 1010 mbar
-Q 50 num_net_charges
-voltage_trap 500 V
+dr_freq 20000 Hz
+voltage_trap 1000 V
 d 1e-3 characteristic_distance_trap(m)

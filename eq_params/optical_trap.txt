@@ -1,0 +1,1 @@
+trap_freq 110e3 Hz

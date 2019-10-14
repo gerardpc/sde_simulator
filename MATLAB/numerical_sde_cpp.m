@@ -65,6 +65,7 @@ avg_var_x = importdata("./simulated_traces/sde_sample_path_0.txt");
 avg_var_v = importdata("./simulated_traces/sde_sample_path_1.txt");
 
 avg_var = [avg_var_x; avg_var_v];
+
 end_t = toc;
 fprintf("Elapsed time to import traces: %f s\n", end_t - ini_t);
 fprintf("\n");
@@ -75,21 +76,19 @@ fprintf("Plotting results.\n\n");
 tt = [t_interval(1):dt*subs_f:t_interval(2)];
 tt = tt(1:length(avg_var_x)); % Check that both vectors are of same length
 
-% Plot x
-figure(1);
-clf;
-hold on;
-% Plot theory for comparison
-plot_theory(tt);
-% Plot simulated variance
-nice_plot(tt, avg_var_x, "time (s)", "$\mathbf{E}[x^2(t)]$", "Simulated variance");
+% % Plot x
+% figure(1);
+% clf;
+% hold on;
+% % Plot simulated variance
+% nice_plot(tt, avg_var_x, "time (s)", "$\mathbf{E}[x^2(t)]$", "Simulated variance");
 
-% Plot v
-figure(2);
-clf;
-hold on;
-% Plot simulated variance
-nice_plot(tt, avg_var_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
+% % Plot v
+% figure(2);
+% clf;
+% hold on;
+% % Plot simulated variance
+% nice_plot(tt, avg_var_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
 end
 
 

@@ -6,7 +6,8 @@
  * 
  * dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
  * 
- * using a Runge-Kutta type method for SDE of strong order 1.
+ * using a Runge-Kutta type method for SDE of strong order 1 and 
+ * deterministic order 2.
  * This method doesn't require non-zero derivatives of b 
  * (diffusion term), since many methods (e.g. the Milstein method) 
  * have an effective strong order < 1 when b is a constant.
@@ -58,7 +59,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  09.10.2019
+ *  14.10.2019
  *      Obs: Working function. Prints on a file estimated <x^2(t)>
  *      Performance, compared with pure MATLAB code is about x500 times 
  *      faster with 4 cores. Automatically adapts to number of cores.
@@ -104,6 +105,7 @@ int main(int argc, char* argv[]){
     // import trap equations from files in eq_params folder
     eq_params trap;
     trap.fill();
+    trap.print();
     
     // call RK method. Put <f(Y_t)> on avg_trace
     vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt, Ito, trap);

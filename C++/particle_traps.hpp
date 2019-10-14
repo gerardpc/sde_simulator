@@ -16,8 +16,8 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  08.10.2019
- *      Parts are working, field functions not yet tested.
+ *  14.10.2019
+ *      Working.
  *********************************************************************** 
  */
  
@@ -50,61 +50,62 @@ struct gaussian_beam{
     void fill(); // constructor
 };
 
-// Paul trap struct
-struct paul_trap{
-    // particle parameters
+// Particle parameters struct
+struct particle{
     double r;
     double density;
     double m;
     double n;
     double alpha;
-    // trap parameters
-    double f_dr;
-    double w_dr;
     double Q;
-    double V;
-    double d;
-    double eps;
-    double alpha_iz;
-    double beta_iz;
-    // ambient parameters
+    double h;
+    void print();
+    void fill();
+};
+
+// Thermodynamics parameters struct
+struct thermodynamics{
+    double k_B = 1.38065e-23;
     double T; 
     double pressure;
     double gamma_ambient;
     double gamma;
     double g_norm;
     double sigma;
-    void print(); // print values
-    void fill(); // constructor
+    void print();
+    void fill(particle &part);
 };
 
 // Optical tweezer struct
-struct opt_tweezer{
-    // particle parameters
-    double r;
-    double density;
-    double m;
-    double n;
-    double alpha;
-    // trap parameters from file
+struct opt_trap{
+    // freq. from file
     double freq;
     double w;
-    // trap parameters from gaussian beam
+    // freq. derived from gaussian beam
     double f_gb_r;
     double w_gb_r;
     double f_gb_z;
     double w_gb_z;
-    // ambient parameters
-    double T; 
-    double pressure;
-    double gamma_ambient;
-    double gamma;
-    double g_norm;
-    double sigma;
     void print(); // print values
     void fill(); // constructor
-    void fill_gb_w(gaussian_beam &gb); // calculate frequencies from GB
+    void fill_gb_w(particle &part, gaussian_beam &gb); // calculate frequencies from GB
 };
+
+// Paul trap struct
+struct paul_trap{
+    // trap parameters
+    double f_dr;
+    double w_dr;
+    double V;
+    double d;
+    // simplified parameters
+    double eps;
+    double alpha_iz;
+    double beta_iz;
+    void print(); // print values
+    void fill(particle &part, thermodynamics &th); // constructor
+};
+
 
 //======================================================================
 // FIELD FUNCTIONS

@@ -16,8 +16,8 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  08.10.2019
- *      Parts are working, field functions not yet tested.
+ *  14.10.2019
+ *      Working.
  *********************************************************************** 
  */
 
@@ -33,7 +33,6 @@
 // MY LIBRARIES
 #include "particle_traps.hpp"
 
-
 //======================================================================
 // Struct member functions
 //======================================================================
@@ -43,6 +42,7 @@ void gaussian_beam::print(){
     printf("h_bar: %.4e\n", h_bar);
     printf("c: %.4e\n", c);
     printf("eps_0: %.4e\n", eps_0);
+    printf("c_factor: %.4e\n", c_factor);
     printf("lambda: %.4e\n", lambda);
     printf("P_0: %.4e\n", P_0);
     printf("NA: %.4e\n", NA);
@@ -51,20 +51,18 @@ void gaussian_beam::print(){
     printf("I_0: %.4e\n", I_0);
 }
 
-void paul_trap::print(){
+void particle::print(){
     printf("r: %.4e\n", r);
     printf("density: %.4e\n", density);
     printf("m: %.4e\n", m);
     printf("n: %.4e\n", n);
     printf("alpha: %.4e\n", alpha);
-    printf("f_dr: %.4e\n", f_dr);
-    printf("w_dr: %.4e\n", w_dr);
     printf("Q: %.4e\n", Q);
-    printf("V: %.4e\n", V);
-    printf("d: %.4e\n", d);
-    printf("eps: %.4e\n", eps);
-    printf("alpha_iz: %.4e\n", alpha_iz);
-    printf("beta_iz: %.4e\n", beta_iz);
+    printf("h: %.4e\n", h);
+}
+
+void thermodynamics::print(){    
+    printf("k_B: %.4e\n", k_B); 
     printf("T: %.4e\n", T);
     printf("pressure: %.4e\n", pressure);
     printf("gamma_ambient: %.4e\n", gamma_ambient);
@@ -73,69 +71,63 @@ void paul_trap::print(){
     printf("sigma: %.4e\n", sigma);
 }
 
-void opt_tweezer::print(){
-    printf("r: %.4e\n", r);
-    printf("density: %.4e\n", density);
-    printf("m: %.4e\n", m);
-    printf("n: %.4e\n", n);
-    printf("alpha: %.4e\n", alpha);
+void opt_trap::print(){
     printf("freq: %.4e\n", freq);
     printf("w: %.4e\n", w);    
     printf("f_r GB: %.4e\n", f_gb_r);
     printf("w_r GB: %.4e\n", w_gb_r);
     printf("f_z GB: %.4e\n", f_gb_z);
     printf("w_z GB: %.4e\n", w_gb_z);
-    printf("T: %.4e\n", T);
-    printf("pressure: %.4e\n", pressure);
-    printf("gamma_ambient: %.4e\n", gamma_ambient);
-    printf("gamma: %.4e\n", gamma);
-    printf("g_norm: %.4e\n", g_norm);
-    printf("sigma: %.4e\n", sigma);
+}
+
+void paul_trap::print(){    
+    printf("f_dr: %.4e\n", f_dr);
+    printf("w_dr: %.4e\n", w_dr);
+    printf("V: %.4e\n", V);
+    printf("d: %.4e\n", d);
+    printf("eps: %.4e\n", eps);
+    printf("alpha_iz: %.4e\n", alpha_iz);
+    printf("beta_iz: %.4e\n", beta_iz);
 }
 
 // Constructor functions
 void gaussian_beam::fill(){        
     // gaussian beam file
-    std::ifstream input_file("../eq_params/gaussian_beam.txt");
-    
+    std::ifstream input_file("../eq_params/gaussian_beam.txt");    
     // vector of doubles containing values from file
-    std::vector<double> file_values;
-    
+    std::vector<double> file_values;    
     // read from file and put values in file_values
     std::string member, description;
     double value;
     while(input_file >> member >> value >> description){
         file_values.push_back(value);
     }
-    input_file.close();
+    input_file.close();    
     
     // Physical constants
     length_unit = 1e-9; 
     h_bar = 1.0546e-34;
     c = 3e8;
-    eps_0 = 8.854e-12;
+    eps_0 = 8.854e-12; 
     
+    // Write values on struct members   
     // laser beam
     lambda = file_values[0]*length_unit; // laser wavelength 
     P_0 = file_values[1]*1e-3; // laser power in W
-    NA = file_values[2]; // Gaussian beam NA
-    
+    NA = file_values[2]; // Gaussian beam NA    
     // numerical details    
     c_factor = 1.5; // correction factor for high NA in Gaussian beam (set to "1" to eliminate correction)
-    
     // Gaussian beam
     w_0 = lambda/(M_PI*NA)*c_factor;
     z_R = M_PI*pow(w_0, 2)/lambda;
     I_0 = P_0*2/(M_PI*pow(w_0, 2));
 }
 
-void paul_trap::fill(){
-    // paul trap file
-    std::ifstream input_file("../eq_params/paul_trap.txt");
-    
+void particle::fill(){    
+    // particle file
+    std::ifstream input_file("../eq_params/particle.txt");    
     // vector of doubles containing values from file
-    std::vector<double> file_values;
-    
+    std::vector<double> file_values;    
     // read from file and put values in file_values
     std::string member, description;
     double value;
@@ -144,43 +136,24 @@ void paul_trap::fill(){
     }
     input_file.close();
     
-    // Write values on struct members
     // Physical constants
-    double k_B = 1.38065e-23;
     double eps_0 = 8.854e-12;
-    // particle parameters
+    
+    // Write values on struct members
     r = file_values[0];
     density = file_values[1];
     m = 4./3.*M_PI*pow(r, 3)*density;
     n = file_values[2];
     alpha = 4*M_PI*pow(r, 3)*eps_0*(pow(n, 2) - 1)/(pow(n, 2) + 2); // induced bulk dipole
-    // trap parameters
-    f_dr = file_values[3];
-    w_dr = 2*M_PI*f_dr;
-    Q = file_values[6];
-    V = file_values[7];
-    d = file_values[8];
-    eps = 1.602176620e-19*Q*V/pow(d,2);
-    // ambient parameters
-    T = file_values[4];
-    pressure = file_values[5];
-    gamma_ambient = 6*M_PI*r*1.84e-5;
-    gamma = gamma_ambient*pressure/1010;
-    g_norm = gamma/m;
-    sigma = sqrt(2*k_B*T*gamma);
-    
-    // value of alpha, beta, as defined in Iz. et al PRE 1995
-    alpha_iz = 2*gamma/(m*w_dr);
-    beta_iz = 4*Q*V*1.602e-19/(m*pow(d*w_dr, 2));
+    Q = file_values[3];
+    h = r*1e-4;
 }
 
-void opt_tweezer::fill(){
-    // optical tweezer file
-    std::ifstream input_file("../eq_params/optical_tweezer.txt");
-    
+void thermodynamics::fill(particle &pt){
+    // thermodynamics file
+    std::ifstream input_file("../eq_params/thermodynamics.txt");    
     // vector of doubles containing values from file
-    std::vector<double> file_values;
-    
+    std::vector<double> file_values;    
     // read from file and put values in file_values
     std::string member, description;
     double value;
@@ -190,36 +163,69 @@ void opt_tweezer::fill(){
     input_file.close();
     
     // Write values on struct members
-    // Physical constants
-    double k_B = 1.38065e-23;
-    double eps_0 = 8.854e-12;
-    // particle parameters
-    r = file_values[0];
-    density = file_values[1];
-    m = 4./3.*M_PI*pow(r, 3)*density;
-    n = file_values[2];
-    alpha = 4*M_PI*pow(r, 3)*eps_0*(pow(n, 2) - 1)/(pow(n, 2) + 2); // induced bulk dipole
-    // trap parameters
-    freq = file_values[3];
-    w = 2*M_PI*freq;
-    // ambient parameters
-    T = file_values[4];
-    pressure = file_values[5];
-    gamma_ambient = 6*M_PI*r*1.84e-5;
-    gamma = gamma_ambient*pressure/1010;
-    g_norm = gamma/m;
+    T = file_values[0];
+    pressure = file_values[1];
+    gamma_ambient = 6*M_PI*pt.r*1.84e-5; // Stokes drag
+    gamma = gamma_ambient*pressure/1010; // gamma is proport. to pressure
+    g_norm = gamma/pt.m;
     sigma = sqrt(2*k_B*T*gamma);
+}
+
+void opt_trap::fill(){
+    // optical tweezer file
+    std::ifstream input_file("../eq_params/optical_trap.txt");    
+    // vector of doubles containing values from file
+    std::vector<double> file_values;    
+    // read from file and put values in file_values
+    std::string member, description;
+    double value;
+    while(input_file >> member >> value >> description){
+        file_values.push_back(value);
+    }
+    input_file.close();
+    
+    // Write values on struct members
+    // trap parameters
+    freq = file_values[0];
+    w = 2*M_PI*freq;
 }
 
 // calculate frequencies from Gaussian Beam
 // ref: Gerard's theory notes
-void opt_tweezer::fill_gb_w(gaussian_beam &gb){        
-    double k_r = 2*M_PI*pow(r,3)/gb.c*(n*n - 1)/(n*n + 2)*8*gb.P_0/M_PI*pow(M_PI*gb.NA/(gb.lambda*gb.c_factor), 4);
-    double k_z = 2*M_PI*pow(r,3)/gb.c*(n*n - 1)/(n*n + 2)*4*gb.P_0*pow(gb.lambda*gb.c_factor, 2)/pow(M_PI,3)*pow(M_PI*gb.NA/(gb.lambda*gb.c_factor), 6);
-    w_gb_r = pow(k_r/m, 0.5);
-    w_gb_z = pow(k_z/m, 0.5);
+void opt_trap::fill_gb_w(particle &part, gaussian_beam &gb){        
+    double k_r = 2*M_PI*pow(part.r,3)/gb.c*(pow(part.n,2) - 1)/(pow(part.n,2)+ 2)*8*gb.P_0/M_PI*pow(M_PI*gb.NA/(gb.lambda*gb.c_factor), 4);
+    double k_z = 2*M_PI*pow(part.r,3)/gb.c*(pow(part.n,2) - 1)/(pow(part.n,2) + 2)*4*gb.P_0*pow(gb.lambda*gb.c_factor, 2)/pow(M_PI,3)*pow(M_PI*gb.NA/(gb.lambda*gb.c_factor), 6);
+    w_gb_r = pow(k_r/part.m, 0.5);
+    w_gb_z = pow(k_z/part.m, 0.5);
     f_gb_r = w_gb_r/(2*M_PI);
     f_gb_z = w_gb_z/(2*M_PI);
+}
+
+void paul_trap::fill(particle &part, thermodynamics &th){
+    // paul trap file
+    std::ifstream input_file("../eq_params/paul_trap.txt");    
+    // vector of doubles containing values from file
+    std::vector<double> file_values;    
+    // read from file and put values in file_values
+    std::string member, description;
+    double value;
+    while(input_file >> member >> value >> description){
+        file_values.push_back(value);
+    }
+    input_file.close();
+    
+    // Write values on struct members
+    // Physical constants
+    double e_charge = 1.602176620e-19; // electron charge (C)
+    // trap parameters
+    f_dr = file_values[0];
+    w_dr = 2*M_PI*f_dr;
+    V = file_values[1];
+    d = file_values[2];
+    eps = e_charge*part.Q*V/pow(d,2);    
+    // value of alpha, beta, as defined in Iz. et al PRE 1995
+    alpha_iz = 2*th.gamma/(part.m*w_dr);
+    beta_iz = 4*part.Q*V*e_charge/(part.m*pow(d*w_dr, 2));
 }
 
 //======================================================================

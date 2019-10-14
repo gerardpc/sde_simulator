@@ -6,7 +6,8 @@
  * 
  * dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
  * 
- * using a Runge-Kutta type method for SDE of strong order 1.
+ * using a Runge-Kutta type method for SDE of strong order 1 and
+ * deterministic order 2.
  * This method doesn't require non-zero derivatives of b 
  * (diffusion term), since many methods (e.g. the Milstein method) 
  * have an effective strong order < 1 when b is a constant.
@@ -29,7 +30,7 @@
  ***********************************************************************  
  * Versions: 
  *  By GP Conangla
- *  09.10.2019
+ *  14.10.2019
  *      Obs: Working library. Prints on a file estimated <x^2(t)>. This
  *      function can be changed (defined in num_vector.hpp as
  *      "double f(double x)".
@@ -73,7 +74,7 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     //f[1] = force_r_gb(x, 0, eq.ot.alpha, eq.gb, 1e-5*eq.ot.r)/eq.ot.m - eq.ot.g_norm*v;
     //f[1] = -pow(eq.ot.w_gb_r, 2)*x - eq.ot.g_norm*v; 
     //f[1] = - eq.ot.g_norm*v; 
-    f[1] = -eq.pt.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.pt.m;
+    f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m;
         
     // return output
     return f;
@@ -92,7 +93,7 @@ std::vector<double> diffusion_function(std::vector<double> y, double t, const eq
     // No noise in x:
     f[0] = 0;
     // Stochastic force in momentum:
-    f[1] = eq.pt.sigma/eq.pt.m;
+    f[1] = eq.th.sigma/eq.part.m;
     
     // return output
     return f;
@@ -104,9 +105,37 @@ std::vector<double> diffusion_function(std::vector<double> y, double t, const eq
 //======================================================================
 void eq_params::fill(){
     gb.fill();
+    part.fill();
+    th.fill(part);
     ot.fill();
-    pt.fill();
-    ot.fill_gb_w(gb);
+    ot.fill_gb_w(part, gb);
+    pt.fill(part, th);
+}
+
+void eq_params::print(){
+    printf("Equation parameters:\n\n");
+    printf("Gaussian beam\n");
+    gb.print();
+    printf("\nParticle\n");
+    part.print();
+    printf("\nThermodynamics\n");
+    th.print();
+    printf("\nOptical tweezer\n");
+    ot.print();
+    printf("\nPaul trap\n");
+    pt.print();
+}
+
+// Dipole force f_r(r,z), Gaussian beam 
+// for a Rayleigh particle (a << lambda) or atom
+double eq_params::force_r(double r, double z){
+    return force_r_gb(r, z, part.alpha, gb, part.h);
+}
+
+// Dipole force f_z(r,z), Gaussian beam 
+// for a Rayleigh particle (a << lambda) or atom
+double eq_params::force_z(double r, double z){
+    return force_z_gb(r, z, part.alpha, gb, part.h);
 }
 
 //======================================================================
