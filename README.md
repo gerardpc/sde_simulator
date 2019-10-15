@@ -77,10 +77,24 @@ Compile the code with the following command
 --------------
 If you are working with MATLAB:
 
-Open MATLAB, go to the MATLAB folder. Call the function "numerical_sde_cpp".
-If you inspect the code, all the inputs and outputs are detailed. E.g.
+Open MATLAB, go to the MATLAB folder. Call the function "numerical_sde_cpp":
 
-    >> [tt, avg_var] = numerical_sde_cpp(1e-5, [0 1], 100, 1, 1 2, [0 0]);
+    >> [[tt, trace] = numerical_sde_cpp(dt, t_int, num_traces, subsampling_f, Ito, n_dim, y0);
+
+If you inspect the code, all the inputs and outputs are detailed, but
+
+1. dt is the discretization time step. Usually it is enough to use a dt 
+small enough for the method to be stable (requires experimenting a bit).
+2. t_int, an interval (e.g. [0 1]) in seconds to simulate.
+3. num_traces, the number of sample paths that will be simulated and averaged.
+4. subsampling_f, an integer number greater or equal than 1 that imports
+only one every subsampling_f points. Makes importing a file much faster
+for large traces.
+5. Ito, a boolean that selects an Ito SDE when is true and a Stratonovich
+SDE when false.
+6. n_dim, the equation dimension (remember the code simulates a vector SDE).
+7. y0, a vector with the initial conditions for each of the n_dim degrees 
+of freedom.
 
 The results will be plotted in different figures.
 

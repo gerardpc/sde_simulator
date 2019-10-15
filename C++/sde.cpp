@@ -97,8 +97,7 @@ int main(int argc, char* argv[]){
     vector<double> y0;
     
     // Fill problem parameters with inputs, if given.
-    // Otherwise use default values: dt = 1e-5, t_interval = [0 1e-1],
-    // num_traces = 100
+    // Otherwise use default values (see sde_library::fill_parameters)
     fill_parameters_w_inputs(argc, argv, dt, t_interval, num_traces, many_traces, subs_f, Ito, n_dim, y0);
 
     //==================================================================

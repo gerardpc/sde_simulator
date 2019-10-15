@@ -58,10 +58,13 @@ struct eq_params{
     paul_trap pt;
     void fill();
     void print();
-    // force from Gaussian beam field
-    double force_r(double r, double z);
-    double force_z(double r, double z);
 };
+
+// Dipole force f_r(r,z), takes parameters from eq_params
+double force_r(double r, double z, const eq_params &eq);
+
+// Dipole force f_z(r,z), takes parameters from eq_params
+double force_z(double r, double z, const eq_params &eq);
 
 //======================================================================
 // PROBLEM FUNCTIONS

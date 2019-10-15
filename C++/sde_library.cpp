@@ -71,10 +71,19 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     // x' = v
     f[0] =  v;
     // v' = ...
-    //f[1] = force_r_gb(x, 0, eq.ot.alpha, eq.gb, 1e-5*eq.ot.r)/eq.ot.m - eq.ot.g_norm*v;
-    //f[1] = -pow(eq.ot.w_gb_r, 2)*x - eq.ot.g_norm*v; 
-    //f[1] = - eq.ot.g_norm*v; 
+    //~ // OPT. TWEEZER
+    //~ f[1] = -eq.th.g_norm*v + force_r(x, 0, eq)/eq.part.m;
+    
+    // PAUL TRAP
     f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m;
+    
+    //~ // MARC & JAN
+    //~ double w_0 = 2*M_PI*120e3;
+    //~ double w_d = 2*M_PI*240e3;
+    //~ double xi = -10e12;
+    //~ double eta = 2e12; 
+    //~ double eps = 0.02;
+    //~ f[1] = -eq.th.g_norm*v - pow(w_0,2)*(1 + eps*cos(w_d*t) + eta*x*v/w_0 + xi*pow(x,2))*x;
         
     // return output
     return f;
@@ -84,10 +93,7 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
 std::vector<double> diffusion_function(std::vector<double> y, double t, const eq_params &eq){
     // output vector
     std::vector<double> f(y.size(), 0);
-    
-    // use physical names
-    double x = y[0];
-    double v = y[1];
+    // x = y[0], v = y[1]
     
     // Calculate force
     // No noise in x:
@@ -126,16 +132,14 @@ void eq_params::print(){
     pt.print();
 }
 
-// Dipole force f_r(r,z), Gaussian beam 
-// for a Rayleigh particle (a << lambda) or atom
-double eq_params::force_r(double r, double z){
-    return force_r_gb(r, z, part.alpha, gb, part.h);
+// Dipole force f_r(r,z), takes parameters from eq_params
+double force_r(double r, double z, const eq_params &eq){
+    return force_r_gb(r, z, eq.part.alpha, eq.gb, eq.part.h);
 }
 
-// Dipole force f_z(r,z), Gaussian beam 
-// for a Rayleigh particle (a << lambda) or atom
-double eq_params::force_z(double r, double z){
-    return force_z_gb(r, z, part.alpha, gb, part.h);
+// Dipole force f_z(r,z), takes parameters from eq_params
+double force_z(double r, double z, const eq_params &eq){
+    return force_z_gb(r, z, eq.part.alpha, eq.gb, eq.part.h);
 }
 
 //======================================================================
