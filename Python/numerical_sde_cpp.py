@@ -140,7 +140,7 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))   
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     
-    fig0.savefig("./test0.png", dpi = 400)
+    fig0.savefig("./test0.svg")
     
     # Plot 1
     fig1, ax = plt.subplots()
@@ -158,7 +158,7 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))    
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     
-    fig1.savefig("./test1.png", dpi = 400)
+    fig1.savefig("./test1.svg")
 
 
 
