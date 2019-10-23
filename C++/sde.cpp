@@ -106,14 +106,17 @@ int main(int argc, char* argv[]){
     trap.fill();
     trap.print();
     
-    // call RK method. Put <f(Y_t)> on avg_trace
-    vector<vector<double>> avg_trace = RK_all(num_traces, many_traces, t_interval, y0, dt, Ito, trap);
+    // call RK method. Put <f(Y_t)> on fun_avg and <f^2(Y_t)> on fun_var    
+    vector<vector<double>> fun_avg;
+    vector<vector<double>> fun_var;
+    RK_all(num_traces, many_traces, t_interval, y0, fun_avg, fun_var, dt, Ito, trap);
     
     //==================================================================    
     // Print results   
     // avg trace number i (where i is degree of freedom number i) will be
     // printed on file ./simulated_traces/sde_sample_path_i.txt
-    print_results(n_dim, avg_trace, subs_f);
+    print_results(n_dim, fun_avg, subs_f, "avg");
+    print_results(n_dim, fun_var, subs_f, "var");
     
     //==================================================================    
     // Finish execution    

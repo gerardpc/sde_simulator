@@ -97,20 +97,23 @@ unsigned int subsampling_f, bool Ito, const eq_params &args);
 // sum of variance to file. Obs: you need to divide by num_traces
 // outside this function to get average!
 void generate_avg_trace(unsigned int num_traces, std::vector<double> t_interval, 
-std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, 
-bool Ito, const eq_params &args, unsigned int thread_id);
+std::vector<double> y0, std::vector<std::vector<double>> &fun_avg, 
+std::vector<std::vector<double>> &fun_var, double dt, bool Ito, 
+const eq_params &args, unsigned int thread_id);
     
 // Generate num_traces traces with generate_avg_trace in 1 or 4 different
 // threads. Print elapsed time for execution on stdout. Returns average
 // of f(Y_t)
-std::vector<std::vector<double>> RK_all(unsigned int num_traces, bool many_traces, 
-std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, const eq_params &args);
+int RK_all(unsigned int num_traces, bool many_traces, 
+std::vector<double> t_interval, std::vector<double> y0, 
+std::vector<std::vector<double>> &fun_avg, std::vector<std::vector<double>> &fun_var,
+double dt, bool Ito, const eq_params &args);
 
 // Print results   
 // avg trace number i (where i is degree of freedom number i) will be
 // printed on file ./simulated_traces/sde_sample_path_i.txt
-int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg_trace,
-unsigned int subsampling_f);
+int print_results(unsigned int n_dim, const std::vector<std::vector<double>> fun_avg,
+unsigned int subsampling_f, std::string statistic);
 
 // fill problem parameters with inputs, if given (otherwise use default
 // values)

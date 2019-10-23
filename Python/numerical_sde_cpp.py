@@ -71,9 +71,10 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     print("Estimate moments of SDE with modified Runge_kutta of strong order 1.\n")
 
     # delete files with old traces, if there are any
-    if os.path.exists("./simulated_traces/sde_sample_path_0.txt"):
+    if os.path.exists("./simulated_traces/sde_sample_path_avg_0.txt"):
         for i in range(n_dim):
-            os.remove("./simulated_traces/sde_sample_path_" + str(i) + ".txt")
+            os.remove("./simulated_traces/sde_sample_path_avg_" + str(i) + ".txt")
+            os.remove("./simulated_traces/sde_sample_path_var_" + str(i) + ".txt")
 
     ####################################################################
     # call compiled C++ routine to generate traces
@@ -85,11 +86,17 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     print("\nImporting traces...")
     ini_t = time.time()
     
-    avg_f = np.loadtxt("./simulated_traces/sde_sample_path_0.txt")
+    avg_f = np.loadtxt("./simulated_traces/sde_sample_path_avg_0.txt")
     for i in range(1, n_dim):
-        new_row = np.loadtxt("./simulated_traces/sde_sample_path_" + str(i) + ".txt")
+        new_row = np.loadtxt("./simulated_traces/sde_sample_path_avg_" + str(i) + ".txt")
         avg_f = np.stack((avg_f, new_row))
         
+    var_f = np.loadtxt("./simulated_traces/sde_sample_path_var_0.txt")
+    for i in range(1, n_dim):
+        new_row = np.loadtxt("./simulated_traces/sde_sample_path_var_" + str(i) + ".txt")
+        var_f = np.stack((var_f, new_row))
+    
+    var_f = var_f - np.square(avg_f)
     end_t = time.time()
     print("Elapsed time to import traces: %f s\n" % (end_t - ini_t))
     
@@ -102,6 +109,7 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     if len(tt) != len(avg_f[0,:]): # Check that both vectors are of same length
         tt = tt[0:len(avg_f[0,:])]
         avg_f = avg_f[:, 0:len(tt)]
+        var_f = var_f[:, 0:len(tt)]
     
     x_dim = 0;
     v_dim = 1;
@@ -110,11 +118,17 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     fig0, ax = plt.subplots()
         
     # Plot theory comparison
-    yy_theory = plot_theory(tt)    
-    ax.plot(tt, yy_theory)
+    # yy_theory = plot_theory(tt)    
+    # ax.plot(tt, yy_theory)
     
     # Plot simulated stat. moment
+    # standard error bounds
+    upper_bound = avg_f[x_dim, :] + np.sqrt(var_f[x_dim, :]/num_traces)
+    lower_bound = avg_f[x_dim, :] - np.sqrt(var_f[x_dim, :]/num_traces)
+    # plot
     ax.plot(tt, avg_f[x_dim, :])
+    ax.fill_between(tt, lower_bound, upper_bound, color = "grey", alpha = 0.2)
+    
     ax.grid(True)
     
     plt.xlabel("time (s)", fontsize = 18)

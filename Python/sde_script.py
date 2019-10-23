@@ -19,7 +19,7 @@ import numerical_sde_cpp as sde
 
 dt = 1e-8 # seconds
 t_interval = [0, 2e-4]
-num_traces = 1000
+num_traces = 100
 subs_f = 40
 Ito = 1
 n_dim = 2 # 2D: x and v

@@ -259,15 +259,17 @@ unsigned int subsampling_f, bool Ito, const eq_params &args){
 // sum of function <f(Y_t)> (Obs: remains to divide by num_traces
 // to estimate average)
 void generate_avg_trace(unsigned int num_traces, std::vector<double> t_interval, 
-std::vector<double> y0, std::vector<std::vector<double>> &avg_var, double dt, 
-bool Ito, const eq_params &args, unsigned int thread_id){
+std::vector<double> y0, std::vector<std::vector<double>> &fun_avg, 
+std::vector<std::vector<double>> &fun_var, double dt, bool Ito, 
+const eq_params &args, unsigned int thread_id){
     // preallocate solution vector y and tmp1 vector
     std::vector<std::vector<double>> y;
     std::vector<std::vector<double>> tmp1;
     
     // call RK method num_traces times
     runge_kutta(t_interval, y0, dt, y, Ito, args); 
-    avg_var = function_array(y);
+    fun_avg = function_array(y);
+    fun_var = array_dot_product(fun_avg, fun_avg);
     if(thread_id == 0){ // main thread, print progress
         unsigned int progress;
         unsigned int last_progress = 0;
@@ -277,8 +279,12 @@ bool Ito, const eq_params &args, unsigned int thread_id){
         // Calculate rest of traces
         for(unsigned int i = 1; i < num_traces; i++){
             runge_kutta(t_interval, y0, dt, y, Ito, args); 
+            // calculate <f(y_t)>
             tmp1 = function_array(y);
-            avg_var = array_sum(avg_var, tmp1);
+            fun_avg = array_sum(fun_avg, tmp1);
+            // calculate Var(f(y_t)) (for standard error)
+            tmp1 = array_dot_product(tmp1, tmp1);
+            fun_var = array_sum(fun_var, tmp1);            
             progress = ((i + 1)*50)/num_traces; 
             if(progress > last_progress){
                 for(unsigned int diff = 0; diff < progress - last_progress; diff++){
@@ -296,8 +302,12 @@ bool Ito, const eq_params &args, unsigned int thread_id){
     } else { // not main thread, do not print
         for(unsigned int i = 1; i < num_traces; i++){
             runge_kutta(t_interval, y0, dt, y, Ito, args); 
+            // calculate <f(y_t)>
             tmp1 = function_array(y);
-            avg_var = array_sum(avg_var, tmp1);
+            fun_avg = array_sum(fun_avg, tmp1);
+            // calculate Var(f(y_t)) (for standard error)
+            tmp1 = array_dot_product(tmp1, tmp1);
+            fun_var = array_sum(fun_var, tmp1);        
         }
     }
 }
@@ -306,8 +316,10 @@ bool Ito, const eq_params &args, unsigned int thread_id){
 // threads (automatic core detection. 
 // Print elapsed time for execution on stdout. Returns average
 // of f(Y_t)
-std::vector<std::vector<double>> RK_all(unsigned int num_traces, bool many_traces, 
-std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, const eq_params &args){
+int RK_all(unsigned int num_traces, bool many_traces, 
+std::vector<double> t_interval, std::vector<double> y0, 
+std::vector<std::vector<double>> &fun_avg, std::vector<std::vector<double>> &fun_var,
+double dt, bool Ito, const eq_params &args){
     // measure initial time
     auto start = std::chrono::high_resolution_clock::now(); 
     
@@ -327,9 +339,6 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, con
         printf("Equation of type: Stratonovich\n");
     }
     
-    // preallocate average of f(x) trace vectors 
-    std::vector<std::vector<double>> avg_trace;
-    
     // Run parallel RK methods to speed code x num_threads 
     if(many_traces and num_threads >= 1){ // if multithreading
         // calculate traces per core
@@ -339,31 +348,39 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, con
         printf("Number of traces per core: %d\n", traces_per_core);
         
         // vector of RK results and threads
-        std::vector<std::vector<std::vector<double>>> thread_avg_trace(num_threads);
+        std::vector<std::vector<std::vector<double>>> thread_fun_avg(num_threads);
+        std::vector<std::vector<std::vector<double>>> thread_fun_var(num_threads);
         std::vector<std::thread> t;
         
         // initiate simulations in threads
         for(unsigned int i = 0; i < num_threads; i++){
-            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_avg_trace[i]), dt, Ito, args, i + 1));
+            t.push_back(std::thread(generate_avg_trace, traces_per_core, t_interval, y0, ref(thread_fun_avg[i]), 
+            ref(thread_fun_var[i]), dt, Ito, args, i + 1));
         }
         
         // run 1 more simulation in main
-        generate_avg_trace(traces_per_core, t_interval, y0, avg_trace, dt, Ito, args, 0);  
+        generate_avg_trace(traces_per_core, t_interval, y0, fun_avg, fun_var, dt, Ito, args, 0);  
     
         // join threads when they finish
         for(unsigned int i = 0; i < num_threads; i++){
             t[i].join();
         }
     
-        // Calculate sum of variances and put it on avg_trace
+        // Calculate sum of averages and put it on fun_avg
         for(unsigned int i = 0; i < num_threads; i++){
-            avg_trace = array_sum(thread_avg_trace[i], avg_trace);
+            fun_avg = array_sum(thread_fun_avg[i], fun_avg);
+        }
+        // Calculate sum of variances and put it on fun_avg
+        for(unsigned int i = 0; i < num_threads; i++){
+            fun_var = array_sum(thread_fun_var[i], fun_var);
         }
         
         // divide by num_traces to estimate <f(y_t)_i>
         double num_tracesf = num_traces;
         double ntraces_factor = 1/(num_tracesf);
-        avg_trace = array_scalar_multiplication(avg_trace, ntraces_factor);
+        fun_avg = array_scalar_multiplication(fun_avg, ntraces_factor);
+        // divide by num_traces to estimate Var(f(y_t)_i)
+        fun_var = array_scalar_multiplication(fun_var, ntraces_factor);
         
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
@@ -374,31 +391,33 @@ std::vector<double> t_interval, std::vector<double> y0, double dt, bool Ito, con
     } else {  // not multithreading
         printf("Number of traces that will be generated: %d\n", num_traces);
         // generate single thread
-        generate_avg_trace(num_traces, t_interval, y0, avg_trace, dt, Ito, args, 0);  
+        generate_avg_trace(num_traces, t_interval, y0, fun_avg, fun_var, dt, Ito, args, 0);  
         // divide by num_traces to estimate <f(y_t)_i(t)>
         double num_tracesf = num_traces;
         double ntraces_factor = 1/(num_tracesf);
-        avg_trace = array_scalar_multiplication(avg_trace, ntraces_factor);
+        fun_avg = array_scalar_multiplication(fun_avg, ntraces_factor);
+        // divide by num_traces to estimate Var(f(y_t)_i)
+        fun_var = array_scalar_multiplication(fun_var, ntraces_factor);
         
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
         printf("\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
-    }        
-    return avg_trace;
+    }
+    return 0;
 }
 
 // Print results   
 // avg trace number i (where i is degree of freedom number i) will be
-// printed on file ./simulated_traces/sde_sample_path_i.txt
-int print_results(unsigned int n_dim, const std::vector<std::vector<double>> avg_trace,
-unsigned int subsampling_f){
+// printed (APPENDED) on file ./simulated_traces/sde_sample_path_statistic_i.txt
+int print_results(unsigned int n_dim, const std::vector<std::vector<double>> fun_avg,
+unsigned int subsampling_f, std::string statistic){
     std::vector<std::string> filename(n_dim);
     std::cout << "Average traces saved in files:\n";
     for(unsigned int i = 0; i < n_dim; i++){
         // generate new filename
-        filename[i] = "./simulated_traces/sde_sample_path_" + std::to_string(i) + ".txt";
+        filename[i] = "./simulated_traces/sde_sample_path_" + statistic + "_" + std::to_string(i) + ".txt";
         std::cout << filename[i] << "\n";
     }
     
@@ -412,7 +431,7 @@ unsigned int subsampling_f){
           exit(1);
         }
         // print to file
-        print_array_asrow(avg_trace, i, subsampling_f, fp);    
+        print_array_asrow(fun_avg, i, subsampling_f, fp);    
         // Close file
         fclose(fp);
     }

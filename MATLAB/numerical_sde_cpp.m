@@ -25,7 +25,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % GP Conangla, 26.09.2019
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function[tt, avg_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values)
+function[tt, fun_avg, fun_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values)
 
 %% Initial checks/allocations
 % Check if folder where trace is going to be exists
@@ -45,9 +45,11 @@ fprintf("====================================================================\n"
 fprintf("Estimate moments of SDE with modified Runge_kutta of strong order 1.\n\n");
 
 % delete files with old traces (if it already exists)
-if isfile('./simulated_traces/sde_sample_path_0.txt')
-    delete './simulated_traces/sde_sample_path_0.txt';
-    delete './simulated_traces/sde_sample_path_1.txt';
+if isfile('./simulated_traces/sde_sample_path_avg_0.txt')
+    delete './simulated_traces/sde_sample_path_avg_0.txt';
+    delete './simulated_traces/sde_sample_path_avg_1.txt';
+    delete './simulated_traces/sde_sample_path_var_0.txt';
+    delete './simulated_traces/sde_sample_path_var_1.txt';
 end
 
 % call compiled C++ routine to generate traces
@@ -61,10 +63,18 @@ status = system("../C++/sde.out " + ...
 fprintf("\nImporting traces...\n");
 tic;
 ini_t = toc;
-avg_var_x = importdata("./simulated_traces/sde_sample_path_0.txt");
-avg_var_v = importdata("./simulated_traces/sde_sample_path_1.txt");
+fun_avg_x = importdata("./simulated_traces/sde_sample_path_avg_0.txt");
+fun_avg_v = importdata("./simulated_traces/sde_sample_path_avg_1.txt");
+fun_var_x = importdata("./simulated_traces/sde_sample_path_var_0.txt");
+fun_var_v = importdata("./simulated_traces/sde_sample_path_var_1.txt");
 
-avg_var = [avg_var_x; avg_var_v];
+% 1st moment
+fun_avg = [fun_avg_x; fun_avg_v];
+
+% 2nd moment (not yet variance)
+sec_mom = [fun_var_x; fun_var_v];
+% Convert to variance
+fun_var = sec_mom - fun_avg.^2;
 
 end_t = toc;
 fprintf("Elapsed time to import traces: %f s\n", end_t - ini_t);
@@ -74,7 +84,7 @@ fprintf("\n");
 fprintf("Plotting results.\n\n");
 % Generate time vector
 tt = [t_interval(1):dt*subs_f:t_interval(2)];
-tt = tt(1:length(avg_var_x)); % Check that both vectors are of same length
+tt = tt(1:length(fun_avg_x)); % Check that both vectors are of same length
 
 % % Plot x
 % figure(1);
@@ -82,7 +92,7 @@ tt = tt(1:length(avg_var_x)); % Check that both vectors are of same length
 % hold on;
 % % Plot simulated variance
 % nice_plot(tt, avg_var_x, "time (s)", "$\mathbf{E}[x^2(t)]$", "Simulated variance");
-
+% 
 % % Plot v
 % figure(2);
 % clf;
