@@ -1,16 +1,16 @@
 /********************************************************************** 
  * DESCRIPTION:
  * 
- * Library to generate sample paths of a given stochastic 
- * process, defined by a user-defined SDE
+ * Library with functions to simulate a dynamical system defined by an
+ * arbitrary (user-defined) SDE
  * 
  * dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
  * 
- * using a Runge-Kutta type method for SDE of strong order 1 and
- * deterministic order 2.
- * This method doesn't require non-zero derivatives of b 
- * (diffusion term), since many methods (e.g. the Milstein method) 
- * have an effective strong order < 1 when b is a constant.
+ * Two simulation options are allowed: ODE type (deterministic and,
+ * therefore, only drift and no diffusion) and SDE type (stochastic, 
+ * considering both terms). The numerical methods used differ depending 
+ * on the case: 4th order Adams predictor-corrector for ODEs, Runge-Kutta
+ * type method of strong order 1 and deterministic order 2 for SDEs.
  * 
  *********************************************************************** 
  * OBSERVATIONS:
@@ -71,11 +71,13 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     // x' = v
     f[0] =  v;
     // v' = ...
+    // HARMONIC OSCILLATOR
+    f[1] = -eq.th.g_norm*v - pow(eq.ot.w, 2)*x;
     //~ // OPT. TWEEZER
     //~ f[1] = -eq.th.g_norm*v + force_r(x, 0, eq)/eq.part.m;
     
     // PAUL TRAP
-    f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m;
+    //~ f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m + force_r(x, 0, eq)/eq.part.m;
     
     //~ // MARC & JAN
     //~ double w_0 = 2*M_PI*120e3;
@@ -145,15 +147,144 @@ double force_z(double r, double z, const eq_params &eq){
 //======================================================================
 // LIBRARY FUNCTIONS
 //======================================================================
-// Runge-Kutta function: numerical code.
+// DETERMINISITC
+// 4th order Runge-Kutta
+// Used to calculate first steps in Adams predictor-corrector method
+void runge4(std::vector<double> t_interval, std::vector<double> y0, double dt,
+std::vector<std::vector<double>> &y, const eq_params &args){
+
+    // PARAMETERS AND INITIALIZATION
+    // generate time vector    
+    std::vector<double> t = generate_v_from_h(t_interval, dt);
+    unsigned int n_time = t.size();
+
+    // initialize y with initial conditions as y(0,:) = y0
+    y[0] = y0;
+    
+    // initialize temp vectors
+    std::vector<double> k1(y0.size());
+    std::vector<double> k2(y0.size());
+    std::vector<double> k3(y0.size());
+    std::vector<double> k4(y0.size());
+    std::vector<double> tmp1(y0.size());
+    std::vector<double> tmp2(y0.size());
+    std::vector<double> tmp3(y0.size());
+    
+    // RK method
+    for(unsigned int n = 1; n < n_time; n++){
+        // k1
+        k1 = drift_function(y[n - 1], t[n - 1], args);
+        
+        // k2
+        tmp1 = scalar_multiplication(k1, dt/2);
+        tmp1 = vector_sum(y[n - 1], tmp1);
+        k2 = drift_function(tmp1, t[n - 1] + dt/2, args);
+        
+        // k3
+        tmp1 = scalar_multiplication(k2, dt/2);
+        tmp1 = vector_sum(y[n - 1], tmp1);
+        k3 = drift_function(tmp1, t[n - 1] + dt/2, args);
+        
+        // k4
+        tmp1 = scalar_multiplication(k3, dt);
+        tmp1 = vector_sum(y[n - 1], tmp1);
+        k4 = drift_function(y[n - 1], t[n - 1] + dt, args);
+        
+        // next y value
+        tmp1 = vector_sum(k1, k4);
+        tmp2 = vector_sum(k2, k3);
+        tmp2 = scalar_multiplication(tmp2, 2);
+        tmp3 = vector_sum(tmp1, tmp2);
+        tmp3 = scalar_multiplication(tmp3, dt/6);
+        y[n] = vector_sum(y[n - 1], tmp3);
+    }
+    // solution is in y. End
+}
+
+// 4-step Adams predictor-corrector
+void adams_pc(std::vector<double> t_interval, std::vector<double> y0, double dt,
+std::vector<std::vector<double>> &y, const eq_params &args){
+
+    // PARAMETERS AND INITIALIZATION
+    // generate time vector    
+    std::vector<double> t = generate_v_from_h(t_interval, dt);
+    unsigned int n_time = t.size();
+    
+    // preallocate solution vector y, full of zeros
+    y = ini_matrix(n_time, y0.size(), 0);
+
+    // use Runge-Kutta method to get 4 initial values in y
+    std::vector<double> t_interval_rk{t[0], t[3]};
+    runge4(t_interval_rk, y0, dt, y, args);
+    
+    // Temporary vectors
+    std::vector<double> tmp1(y0.size());
+    std::vector<double> tmp2(y0.size());
+    std::vector<double> tmp3(y0.size());
+    std::vector<double> tmp4(y0.size());
+    
+    // The Adams method itself
+    for(unsigned int n = 4; n < n_time; n++){
+        // Predictor: this y[n] is the predicted value
+        // previous steps
+        tmp1 = scalar_multiplication(drift_function(y[n - 1], t[n - 1], args), 55);
+        tmp2 = scalar_multiplication(drift_function(y[n - 2], t[n - 2], args), -59);
+        tmp3 = scalar_multiplication(drift_function(y[n - 3], t[n - 3], args), 37);
+        tmp4 = scalar_multiplication(drift_function(y[n - 4], t[n - 4], args), -9);
+        // combine steps
+        tmp1 = vector_sum(tmp1, tmp2);
+        tmp1 = vector_sum(tmp1, tmp3);
+        tmp1 = vector_sum(tmp1, tmp4);
+        tmp1 = scalar_multiplication(tmp1, dt/24);
+        y[n] = vector_sum(y[n - 1], tmp1);
+            
+        // Corrector: now the value y[n] is updated with the corrected value
+        tmp1 = scalar_multiplication(drift_function(y[n], t[n], args), 9);
+        tmp2 = scalar_multiplication(drift_function(y[n - 1], t[n - 1], args), 19);
+        tmp3 = scalar_multiplication(drift_function(y[n - 2], t[n - 2], args), -5);
+        tmp4 = scalar_multiplication(drift_function(y[n - 3], t[n - 3], args), 1);
+        // combine steps
+        tmp1 = vector_sum(tmp1, tmp2);
+        tmp1 = vector_sum(tmp1, tmp3);
+        tmp1 = vector_sum(tmp1, tmp4);
+        tmp1 = scalar_multiplication(tmp1, dt/24);
+        y[n] = vector_sum(y[n - 1], tmp1);
+    }
+    // solution is in y. End
+}
+
+// Generate 1 trace with the Adams method (ODE case)
+int adams_all(std::vector<double> t_interval, std::vector<double> y0, 
+std::vector<std::vector<double>> &y, double dt, const eq_params &args){
+    // measure initial time
+    auto start = std::chrono::high_resolution_clock::now();     
+    printf("------------------------------------------\n");
+    printf("A single (deterministic) trace will be generated.\n");
+    
+    // generate single thread
+    adams_pc(t_interval, y0, dt, y, args);
+    
+    // calculate <f(y_t)>
+    y = function_array(y);
+    
+    // calculate and print execution time
+    auto stop = std::chrono::high_resolution_clock::now(); 
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+    printf("\nExecution time to simulate one x %g s trace with dt = %.1e: %g s\n", 
+            t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
+    return 0;
+}
+
+//======================================================================
+// STOCHASTIC
+// Stochastic Runge-Kutta function: numerical code.
 // output in y
 void runge_kutta(std::vector<double> t_interval,
 std::vector<double> y0, double dt, std::vector<std::vector<double>> &y, 
 bool Ito, const eq_params &args){
     
     // PARAMETERS AND INITIALIZATION
-    // generate time vector
-    
+    // generate time vector    
     std::vector<double> t = generate_v_from_h(t_interval, dt);
     unsigned int n_time = t.size();
     // preallocate solution vector y, full of zeros
@@ -360,7 +491,7 @@ double dt, bool Ito, const eq_params &args){
         
         // run 1 more simulation in main
         generate_avg_trace(traces_per_core, t_interval, y0, fun_avg, fun_var, dt, Ito, args, 0);  
-    
+
         // join threads when they finish
         for(unsigned int i = 0; i < num_threads; i++){
             t[i].join();
@@ -443,7 +574,8 @@ unsigned int subsampling_f, std::string statistic){
 // values)
 int fill_parameters_w_inputs(int argc, char* argv[], double &dt, 
 std::vector<double> &t_interval, unsigned int &num_traces, bool &many_traces, 
-unsigned int &subsampling_f, bool &Ito, unsigned int &n_dim, std::vector<double> &y0){
+unsigned int &subsampling_f, std::string &eq_type, bool &Ito, unsigned int &n_dim, 
+std::vector<double> &y0){
     // dt: time step
     if(argc < 2){
         dt = 1e-5; // default value
@@ -479,30 +611,37 @@ unsigned int &subsampling_f, bool &Ito, unsigned int &n_dim, std::vector<double>
         subsampling_f = atoi(argv[5]); // input value
     }
     
-    // Ito or Stratonovich
+    // ODE or SDE
     if(argc < 7){ 
+        eq_type = "sde"; // SDE by default
+    } else {
+        eq_type = argv[6]; // input value
+    }
+    
+    // Ito or Stratonovich
+    if(argc < 8){ 
         Ito = true; // Ito by default
     } else {
-        Ito = atoi(argv[6]); // input value
+        Ito = atoi(argv[7]); // input value
     }
     
     // problem dimension
-    if(argc < 8){ 
+    if(argc < 9){ 
         n_dim = 2; // 2D problem, think of x and v.
     } else {
-        n_dim = atoi(argv[7]); // input value
+        n_dim = atoi(argv[8]); // input value
     }    
         
     // initial conditions, if given
     std::vector<double> v_zeros(n_dim);
     y0 = v_zeros;
-    if(argc < 8){ 
+    if(argc < 9){ 
         // default: initial conditions = 0
         y0 = {0, 0};
     } else {
         // read initial conditions
         for(unsigned int i = 0; i < n_dim; i++){
-            y0[i] = atof(argv[8 + i]);
+            y0[i] = atof(argv[9 + i]);
         }
     }
     return 0;

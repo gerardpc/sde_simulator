@@ -1,10 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% numerical_sde_cpp.m
+% numerical_sde_cpp.py
 % 
-% Calculate sample path/estimate moments of SDE by using Runge_kutta + 
-% averaging on a fast C++ compiled routine.
-% (x500 speed increase with respect to equivalent MATLAB routine).
-% Plot output with nice_plot
+% Calculate sample path/estimate moments of a dynamical system defined by
+% a SDE by using Runge_kutta + averaging on a fast C++ compiled routine.
+%
+% Alternatively, simulate a deterministic ODE.
+%
+% Plot output
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Numerically solve a langevin type SDE dY = a(t,Y)dt + b*dW_t, Y(t0) = Y0
 %
@@ -14,6 +16,8 @@
 %                           e.g. 100
 %         subs_f         -- subsampling factor (for every N generated plots
 %                           in C++ routine, import only N/subs_f)
+%         eq_type        -- Choose between ode and sde simulation (i.e., 
+%                           only drift or drift & diffusion).
 %         Ito            -- Boolean type. True if Ito equation, false if
 %                           Stratonovich equation.
 %         n_dim          -- problem dimension, e.g. 2
@@ -25,7 +29,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % GP Conangla, 26.09.2019
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function[tt, fun_avg, fun_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values)
+function[tt, fun_avg, fun_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initial_values)
 
 %% Initial checks/allocations
 % Check if folder where trace is going to be exists
@@ -56,13 +60,22 @@ end
 fprintf("Calling C++ routine...\n");
 status = system("../C++/sde.out " + ...
     num2str(dt) + " " + num2str(t_interval(1)) + " " + num2str(t_interval(2)) + " " ...
-    + num2str(num_traces) + " " + num2str(subs_f) + " " + num2str(Ito) + " " + ...
-    num2str(n_dim) + " " + ini_values_string);
+    + num2str(num_traces) + " " + num2str(subs_f) + " " + eq_type + " " + num2str(Ito) + ...
+    " " + num2str(n_dim) + " " + ini_values_string);
+
+if status == 1 % check for errors
+    tt = NaN;
+    fun_avg = NaN;
+    fun_var = NaN;
+    fprintf("Exiting...\n\n");
+    return;
+end
 
 %% import traces from files
 fprintf("\nImporting traces...\n");
 tic;
 ini_t = toc;
+
 fun_avg_x = importdata("./simulated_traces/sde_sample_path_avg_0.txt");
 fun_avg_v = importdata("./simulated_traces/sde_sample_path_avg_1.txt");
 fun_var_x = importdata("./simulated_traces/sde_sample_path_var_0.txt");
@@ -73,6 +86,7 @@ fun_avg = [fun_avg_x; fun_avg_v];
 
 % 2nd moment (not yet variance)
 sec_mom = [fun_var_x; fun_var_v];
+
 % Convert to variance
 fun_var = sec_mom - fun_avg.^2;
 
@@ -86,19 +100,31 @@ fprintf("Plotting results.\n\n");
 tt = [t_interval(1):dt*subs_f:t_interval(2)];
 tt = tt(1:length(fun_avg_x)); % Check that both vectors are of same length
 
-% % Plot x
-% figure(1);
-% clf;
-% hold on;
-% % Plot simulated variance
-% nice_plot(tt, avg_var_x, "time (s)", "$\mathbf{E}[x^2(t)]$", "Simulated variance");
-% 
-% % Plot v
-% figure(2);
-% clf;
-% hold on;
-% % Plot simulated variance
-% nice_plot(tt, avg_var_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
+% Plot x
+figure(1);
+clf;
+hold on;
+% Plot simulated variance
+nice_plot(tt, fun_avg_x, "time (s)", "$\mathbf{E}[x^2(t)]$", "Simulated variance");
+
+if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
+    upper = fun_avg_x + sqrt(fun_var(1,:))/sqrt(num_traces);
+    down = fun_avg_x - sqrt(fun_var(1,:))/sqrt(num_traces);
+    shade(tt, upper, tt, down, 'FillType',[1 2;2 1], 'FillColor', [0 0 0], 'FillAlpha', 0.1);
+end
+
+% Plot v
+figure(2);
+clf;
+hold on;
+% Plot simulated variance
+nice_plot(tt, fun_avg_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
+
+if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
+    upper = fun_avg_v + sqrt(fun_var(2,:))/sqrt(num_traces);
+    down = fun_avg_v - sqrt(fun_var(2,:))/sqrt(num_traces);
+    shade(tt, upper, tt, down, 'FillType',[1 2;2 1], 'FillColor', [0 0 0], 'FillAlpha', 0.1);
+end
 end
 
 

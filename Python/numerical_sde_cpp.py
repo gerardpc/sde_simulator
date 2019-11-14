@@ -1,10 +1,12 @@
 ###########################################################################
 # numerical_sde_cpp.py
 # 
-# Calculate sample path/estimate moments of SDE by using Runge_kutta + 
-# averaging on a fast C++ compiled routine.
-# (x500 speed increase with respect to equivalent MATLAB routine).
-# Plot output with nice_plot
+# Calculate sample path/estimate moments of a dynamical system defined by
+# a SDE by using Runge_kutta + averaging on a fast C++ compiled routine.
+#
+# Alternatively, simulate a deterministic ODE.
+#
+# Plot output
 ###########################################################################
 # Numerically solve a langevin type SDE dY = a(t,Y)dt + b*dW_t, Y(t0) = Y0
 #
@@ -12,6 +14,8 @@
 #         t_interval     -- vector with [t_ini t_end]
 #         num_traces     -- Number of traces for average to estimate moments
 #                           e.g. 100
+#         eq_type        -- Equation type: "ode" (deterministic) or 
+#                           "sde" (stochastic)
 #         subs_f         -- Subsampling factor. For every N points generated
 #                           by the C++ routine, import only N/subs_f
 #         Ito            -- Boolean type. True if Ito equation, false if
@@ -51,7 +55,7 @@ def plot_theory(tt):
     return var_analytical
 
 # main script to generate traces and plot result
-def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values):
+def numerical_sde(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initial_values):
 
     ####################################################################
     # Initial checks/allocations
@@ -79,8 +83,13 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     ####################################################################
     # call compiled C++ routine to generate traces
     print("Calling C++ routine...\n")
-    cpp_command = "../C++/sde.out " + str(dt) + " " + str(t_interval[0]) + " " + str(t_interval[1]) + " " + str(num_traces) + " " + str(subs_f) + " " + str(Ito) + " " + str(n_dim) + " " + ini_values_string
+    cpp_command = "../C++/sde.out " + str(dt) + " " + str(t_interval[0]) + " " + str(t_interval[1]) + " " + str(num_traces) + " " + str(subs_f) + " " + eq_type + " " + str(Ito) + " " + str(n_dim) + " " + ini_values_string
     status = subprocess.call(cpp_command, shell = True)
+    
+    # check that there were no errors
+    if status != 0:
+        print("Exiting...\n")
+        return
     
     # import traces from files
     print("\nImporting traces...")
@@ -96,7 +105,10 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
         new_row = np.loadtxt("./simulated_traces/sde_sample_path_var_" + str(i) + ".txt")
         var_f = np.stack((var_f, new_row))
     
-    var_f = var_f - np.square(avg_f)
+    # calculate variance
+    # the absolute is just a sanity check, it should be always positive
+    # but I've found some rounding errors that lead to negative results
+    var_f = np.absolute(var_f - np.square(avg_f)) 
     end_t = time.time()
     print("Elapsed time to import traces: %f s\n" % (end_t - ini_t))
     
@@ -121,13 +133,15 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     # yy_theory = plot_theory(tt)    
     # ax.plot(tt, yy_theory)
     
+    # Plot uncertainty bounds if sde
+    if eq_type == "sde" and num_traces > 1:
+        # standard error bounds
+        upper_bound = avg_f[x_dim, :] + np.sqrt(var_f[x_dim, :]/num_traces)
+        lower_bound = avg_f[x_dim, :] - np.sqrt(var_f[x_dim, :]/num_traces)
+        ax.fill_between(tt, lower_bound, upper_bound, color = "grey", alpha = 0.2)
+    
     # Plot simulated stat. moment
-    # standard error bounds
-    upper_bound = avg_f[x_dim, :] + np.sqrt(var_f[x_dim, :]/num_traces)
-    lower_bound = avg_f[x_dim, :] - np.sqrt(var_f[x_dim, :]/num_traces)
-    # plot
     ax.plot(tt, avg_f[x_dim, :])
-    ax.fill_between(tt, lower_bound, upper_bound, color = "grey", alpha = 0.2)
     
     ax.grid(True)
     
@@ -144,6 +158,13 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, Ito, n_dim, initial_values
     
     # Plot 1
     fig1, ax = plt.subplots()
+    
+    # Plot uncertainty bounds if sde
+    if eq_type == "sde" and num_traces > 1:
+        # standard error bounds
+        upper_bound = avg_f[v_dim, :] + np.sqrt(var_f[v_dim, :]/num_traces)
+        lower_bound = avg_f[v_dim, :] - np.sqrt(var_f[v_dim, :]/num_traces)
+        ax.fill_between(tt, lower_bound, upper_bound, color = "grey", alpha = 0.2)
     
     # Plot simulated stat. moment
     ax.plot(tt, avg_f[v_dim, :])

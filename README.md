@@ -2,40 +2,56 @@
 
 Description
 --------------
-Functions + libraries to generate sample paths of a given vectorial
-stochastic process, defined by the SDE
+This project includes functions and libraries to numerically simulate a 
+dynamical system defined by the SDE
+  
+dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
 
-dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0
+where a(t,Y) (drift term) and b(t,Y) (diffusion term) are arbitrary (i.e.,
+defined by the user) and Y can be of arbitrary (but finite) dimension.
 
-and where Y has arbitrary (but finite) dimension.
+Two simulation options are allowed:
+ 
+       - Deterministic dynamical system (ODE). No noise in the equations of 
+         motion is considered. In this case, an Adams predictor-corrector 
+         method of 4th order is used.
+ 
+       - Stochastic dynamical system (SDE): a Runge-Kutta type method for SDE
+         of strong order 1 and deterministic order 2 is used. 
+         Since every run of the method for the SDE will generate a different 
+         sample path, the code is optimized to generate many sample paths
+         at once using multithreading. When the simulation phase is finished,
+         the averages and standard errors are calculated.
 
-A typical application would be generating n sample paths Y_t, computing
-a certain function of them f(Y_t) and then averaging the result, to find 
-the expected value of f(Y_t). The most common case is calculating the 2nd 
+Assuming the "sde" simulation type is chosen, a typical application 
+would consist of generating n sample paths Y_t, 
+computing a certain function of them, f(Y_t), and then averaging the result, to find 
+the expected value of f(Y_t). The most common function choice is the 2nd 
 moment, the variance of Y(t): <Y^2(t)>.
 
 The code uses a stochastic Runge-Kutta type method of strong order 1 (in 
-the presence of noise) and deterministic order 2 (i.e., for zero noise) 
+the presence of noise) that converges to deterministic order 2 (i.e., for zero noise) 
 that does not require any non-zero derivatives of b (diffusion term).
 Other methods (e.g. the Milstein method) have strong order 1 but reduce
-to the Euler-Maruyama method (strong order 0.5) when b is a constant.
-
-The method allows choosing between Ito or Stratonovich interpretations of
-the SDE.
+to the Euler-Maruyama method (strong order 0.5) when b is a constant. 
+The method also allows choosing between Ito or Stratonovich interpretations
+of the SDE.
 
 The code is divided in two parts:
 
-- A C++ main() + library functions for the most numerically intensive 
-part: generating the traces Y_t, calculating f(Y_t) and averaging them. 
+- First: A C++ main() + library functions for the most numerically intensive 
+part: in the deterministic case, numerically integrate the ODE; in
+the stochastic case, generate the traces Y_t, calculate f(Y_t) and f^2(Y_t) 
+(to be able to calculate the standard error) and average the traces. 
 Then write the result in a file. Note that in the present form, the C++
 main calculates (by default) the VARIANCE, i.e. f(Y_t) = Y_t^2, and not 
-any arbitrary function. The function which expected value is calculated
+any arbitrary function. The function whose expected value is calculated
 is defined in sde_library.cpp as "double f(double f)" and can be changed
-to any other function the user wants to define.
+to any other function the user wants to define. 
 The code uses multithreading (detects number of cores and adapts number of
 threads).
 
-- MATLAB and Python scripts to load the saved trace and plot the results.
+- Second: MATLAB and Python scripts to load the saved traces and plot the results.
 
 In my personal computer, this code boosted the performance (reduction of
 execution time) a factor ~1000 with respect to equivalent code implemented
@@ -45,7 +61,10 @@ Everything is well commented, so you should be able to modify the code
 (whether the C++ or the MATLAB/Python part) easily and perform your own 
 numerical analysis.
 
-The RK method is an implementation of 
+ The deterministic ODE Adams method can be found in
+ > https://en.wikiversity.org/wiki/Adams-Bashforth_and_Adams-Moulton_methods
+
+The RK stochastic method is an implementation of 
 > A. J. Roberts. Modify the improved Euler scheme to integrate stochastic differential equations. [1], Oct 2012.
 which you can find here: https://arxiv.org/abs/1210.0933
 
@@ -75,27 +94,32 @@ Compile the code with the following command
 
 2- Generate traces and plot the results
 --------------
-If you are working with MATLAB:
-
-Open MATLAB, go to the MATLAB folder. Call the function "numerical_sde_cpp":
-
-    >> [[tt, trace] = numerical_sde_cpp(dt, t_int, num_traces, subsampling_f, Ito, n_dim, y0);
-
-If you inspect the code, all the inputs and outputs are detailed, but
+The following is a list of the C++ routine parameters:
 
 1. dt is the discretization time step. Usually it is enough to use a dt 
 small enough for the method to be stable (requires experimenting a bit).
 2. t_int, an interval (e.g. [0 1]) in seconds to simulate.
 3. num_traces, the number of sample paths that will be simulated and averaged.
+This parameter is not used in the ODE case: uses 1 by default.
 4. subsampling_f, an integer number greater or equal than 1 that imports
 only one every subsampling_f points. Makes importing a file much faster
 for large traces.
-5. Ito, a boolean that selects an Ito SDE when is true and a Stratonovich
-SDE when false.
-6. n_dim, the equation dimension (remember the code simulates a vector SDE).
-7. y0, a vector with the initial conditions for each of the n_dim degrees 
+5. eq_type, a string with two possible values ("ode" = deterministic simulation,
+"sde" = stochastic simulation).
+6. Ito, a boolean that selects an Ito SDE when is true and a Stratonovich
+SDE when false. This parameter is not used in the ODE case.
+7. n_dim, the equation dimension (i.e., the number of variables or equations).
+8. y0, a vector with the initial conditions for each of the n_dim degrees 
 of freedom.
 
+If you are working with MATLAB:
+
+Open MATLAB, go to the MATLAB folder. Call the script "sde_script" from
+the MATLAB Command Window:
+    
+    >> sde_script;
+    
+If you inspect the code, all the parameters are detailed and can be changed.
 The results will be plotted in different figures.
 
 If you are working with Python:
@@ -106,14 +130,15 @@ E.g.
 
     >> python sde_script.py
 
-The results will be saved as png figures. Check the "test.png" file for
+The results will be saved as svg figures. Check the "test.svg" file for
 an example output.
 
 
 2- Changing the a(t,Y) and b(t,Y) functions of the SDE
 --------------
-The a(t,Y) and b(t,Y) functions are defined in the file sde_library.cpp 
-as the drift_function and diffusion_function, respectively.
+The a(t,Y) and b(t,Y) functions define the dynamical system. Their expression
+can be modified in the file sde_library.cpp as the "drift_function" and
+"diffusion_function", respectively.
 
 The f[i] vector inside each of these functions contains the driving
 term for the equations of motion (the drift_function is the "deterministic"
@@ -126,11 +151,12 @@ moves in one dimension, the equations will be
     x' = v
     v' = 0 + sigma/m
 
-The first equation is clear, and the 2nd equation is Newton's 2nd law.
-This is precisely the equation included in the code by default, and 
-should be used as an example for other, arbitrary, drift and diffusion
-functions. Of course, every time any of these functions is changed, the
-C++ code should be recompiled with the command indicated in section 1.
+The first equation is the definition of the velocity, and the 2nd equation 
+is Newton's 2nd law. This is precisely the equation included in the repository 
+by default: inspect the code to understand the syntax.
+Following this example, other, arbitrary, drift and diffusion functions
+can be written. Of course, every time any of these functions is changed, the
+C++ code has to be recompiled with the command indicated in section 1.
 
 3- Changing the function f(x) that is used in the expected value, <f(Y_t)>
 --------------
