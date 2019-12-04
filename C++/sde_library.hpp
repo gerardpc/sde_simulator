@@ -43,42 +43,8 @@
 #include <stdlib.h> // includes rand()
 
 // MY LIBRARIES
-#include "particle_traps.hpp" // optical tweezer, paul trap and gaussian beam
+#include "eq_definitions.hpp"
 #include "num_vector.hpp" // basic vector manipulation library
-
-//======================================================================
-// EQUATION PARAMETERS STRUCT
-//======================================================================
-struct eq_params{
-    // the members of this struct are specific to my problem of interest,
-    // but can be replaced to any other members/parameters to send variables
-    // inside the drift and diffusion functions
-    gaussian_beam gb;
-    particle part;
-    thermodynamics th;
-    opt_trap ot;
-    paul_trap pt;
-    void fill();
-    void print();
-};
-
-// Dipole force f_r(r,z), takes parameters from eq_params
-double force_r(double r, double z, const eq_params &eq);
-
-// Dipole force f_z(r,z), takes parameters from eq_params
-double force_z(double r, double z, const eq_params &eq);
-
-//======================================================================
-// PROBLEM FUNCTIONS
-//======================================================================
-// SDE FUNCTIONS
-// dY = a(t,Y)dt + b(t,Y)*dW_t, Y(t0) = Y0,
-
-// drift of process: a(t,Y)
-std::vector<double> drift_function(std::vector<double> y, double t, const eq_params &args);
-
-// diffusion of process: b(t, Y)
-std::vector<double> diffusion_function(std::vector<double> y, double t, const eq_params &args);
 
 //======================================================================
 // LIBRARY FUNCTIONS

@@ -1,8 +1,8 @@
 /********************************************************************** 
  * DESCRIPTION:
  * 
- * Particle trap libraries: optical tweezers (i.e. dipole trap),  
- * Paul trap, Gaussian beams, etc.
+ * Particle trap libraries: equation parameters, 
+ * optical tweezers (i.e. dipole trap),  Paul trap, Gaussian beams, etc.
  * 
  *********************************************************************** 
  * OBSERVATIONS:
@@ -31,7 +31,7 @@
 #include <fstream> // for reading file
 
 // MY LIBRARIES
-#include "particle_traps.hpp"
+#include "physics.hpp"
 
 //======================================================================
 // Struct member functions
@@ -228,6 +228,33 @@ void paul_trap::fill(particle &part, thermodynamics &th){
     beta_iz = 4*part.Q*V*e_charge/(part.m*pow(d*w_dr, 2));
 }
 
+
+//======================================================================
+// Equation parameters struct constructor
+//======================================================================
+void eq_params::fill(){
+    gb.fill();
+    part.fill();
+    th.fill(part);
+    ot.fill();
+    ot.fill_gb_w(part, gb);
+    pt.fill(part, th);
+}
+
+void eq_params::print(){
+    printf("Equation parameters:\n\n");
+    printf("Gaussian beam\n");
+    gb.print();
+    printf("\nParticle\n");
+    part.print();
+    printf("\nThermodynamics\n");
+    th.print();
+    printf("\nOptical tweezer\n");
+    ot.print();
+    printf("\nPaul trap\n");
+    pt.print();
+}
+
 //======================================================================
 // FIELD FUNCTIONS
 //======================================================================
@@ -286,7 +313,15 @@ double force_paul_trap(double x, double t, const paul_trap &pt){
     return (pt.eps*cos(pt.w_dr*t)*x);
 }
 
+// Dipole force f_r(r,z), takes parameters from eq_params
+double force_r(double r, double z, const eq_params &eq){
+    return force_r_gb(r, z, eq.part.alpha, eq.gb, eq.part.h);
+}
 
+// Dipole force f_z(r,z), takes parameters from eq_params
+double force_z(double r, double z, const eq_params &eq){
+    return force_z_gb(r, z, eq.part.alpha, eq.gb, eq.part.h);
+}
 
 
 

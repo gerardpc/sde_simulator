@@ -1,8 +1,8 @@
 /********************************************************************** 
  * DESCRIPTION:
  * 
- * Particle trap libraries: optical tweezers (i.e. dipole trap),  
- * Paul trap, Gaussian beams, etc.
+ * Particle trap libraries: equation parameters, 
+ * optical tweezers (i.e. dipole trap),  Paul trap, Gaussian beams, etc.
  * 
  *********************************************************************** 
  * OBSERVATIONS:
@@ -106,6 +106,21 @@ struct paul_trap{
     void fill(particle &part, thermodynamics &th); // constructor
 };
 
+//======================================================================
+// EQUATION PARAMETERS STRUCT
+//======================================================================
+struct eq_params{
+    // the members of this struct are specific to my problem of interest,
+    // but can be replaced to any other members/parameters to send variables
+    // inside the drift and diffusion functions
+    gaussian_beam gb;
+    particle part;
+    thermodynamics th;
+    opt_trap ot;
+    paul_trap pt;
+    void fill();
+    void print();
+};
 
 //======================================================================
 // FIELD FUNCTIONS
@@ -143,8 +158,11 @@ double force_z_gb(double r, double z, double alpha, const gaussian_beam &gb, dou
 // paul trap force field
 double force_paul_trap(double x, double t, const paul_trap &pt);
 
+// Dipole force f_r(r,z), takes parameters from eq_params
+double force_r(double r, double z, const eq_params &eq);
 
-
+// Dipole force f_z(r,z), takes parameters from eq_params
+double force_z(double r, double z, const eq_params &eq);
 
 
 

@@ -46,7 +46,7 @@ the stochastic case, generate the traces Y_t, calculate f(Y_t) and f^2(Y_t)
 Then write the result in a file. Note that in the present form, the C++
 main calculates (by default) the VARIANCE, i.e. f(Y_t) = Y_t^2, and not 
 any arbitrary function. The function whose expected value is calculated
-is defined in sde_library.cpp as "double f(double f)" and can be changed
+is defined in num_vector.cpp as "double f(double f)" and can be changed
 to any other function the user wants to define. 
 The code uses multithreading (detects number of cores and adapts number of
 threads).
@@ -89,9 +89,12 @@ Open a terminal, go to the C++ folder
 
 Compile the code with the following command
 
-    >> g++ -std=c++11 sde.cpp sde_library.cpp num_vector.cpp particle_traps.cpp -o sde.out -O3 -pthread
+    >> g++ sde.cpp sde_library.cpp num_vector.cpp physics.cpp eq_definitions.cpp -o sde.out -O3 -pthread
 
-(The option -std=c++11 is in general not needed; your compiler probably uses the C++11 standard by default).
+The option -std=c++11 is in general not needed (your compiler probably 
+uses the C++11 standard by default). If you have trouble compiling, try
+it again by adding this option.
+
 
 2- Generate traces and plot the results
 --------------
@@ -138,7 +141,7 @@ an example output.
 2- Changing the a(t,Y) and b(t,Y) functions of the SDE
 --------------
 The a(t,Y) and b(t,Y) functions define the dynamical system. Their expression
-can be modified in the file sde_library.cpp as the "drift_function" and
+can be modified in the file eq_definitions.cpp as the "drift_function" and
 "diffusion_function", respectively.
 
 The f[i] vector inside each of these functions contains the driving
@@ -170,7 +173,7 @@ Just remember to write it in C++.
 --------------
 The code is specifically designed to be easy to do that (although of 
 course it is not mandatory; any drift/diffusion functions can be used). 
-You should use the struct "eq_params", defined in sde_library.cpp/sde_library.hpp,
+You should use the struct "eq_params", defined in physics.cpp/physics.hpp,
 which uses the parameters defined in the folder "eq_params" and the functions 
 and struct members from particle_traps.cpp and particle_traps.hpp.
 The values from this struct can then be used to define the drift and diffusion,
@@ -179,25 +182,25 @@ since eq_params is passed as one of the function parameters.
 eq_params has five substructs:
 
 1. Gaussian beam: defines a Gaussian beam parameters. Its values can be
-modified in ./eqp_params/gaussian_beam.txt.
+modified in ./eq_params/gaussian_beam.txt.
 
 2. Particle: defines the trapped particle parameters. Its values can be
-modified in ./eqp_params/particle.txt.
+modified in ./eq_params/particle.txt.
 
 3. Thermodynamics: defines the thermodynamical parameters. Its values can be
-modified in ./eqp_params/thermodynamics.txt.
+modified in ./eq_params/thermodynamics.txt.
 
 4. Optical trap: defines the optical dipole trap parameters. Its values can be
-modified in ./eqp_params/optical_trap.txt.
+modified in ./eq_params/optical_trap.txt.
 
 5. Paul trap: defines the Paul trap parameters. Its values can be
-modified in ./eqp_params/paul_trap.txt.
+modified in ./eq_params/paul_trap.txt.
 
 Since the parameters are imported from files, the values can be modified
 without the need to recompile the code every time. 
 
 More details can be found by inspecting the struct definitions in 
-particle_traps.cpp/particle_traps.hpp
+physics.cpp/physics.hpp
 
 > By: Gerard Planes Conangla
 
