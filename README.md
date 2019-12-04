@@ -89,8 +89,9 @@ Open a terminal, go to the C++ folder
 
 Compile the code with the following command
 
-    >> g++ sde.cpp sde_library.cpp num_vector.cpp particle_traps.cpp -o sde.out -O3 -pthread
+    >> g++ -std=c++11 sde.cpp sde_library.cpp num_vector.cpp particle_traps.cpp -o sde.out -O3 -pthread
 
+(The option -std=c++11 is in general not needed; your compiler probably uses the C++11 standard by default).
 
 2- Generate traces and plot the results
 --------------

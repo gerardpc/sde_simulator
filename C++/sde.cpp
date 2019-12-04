@@ -127,6 +127,7 @@ int main(int argc, char* argv[]){
     // (only necessary if particle trap equations are going to be used)
     eq_params trap;
     trap.fill();
+    trap.print();
     
     // Define average trace vectors
     vector<vector<double>> fun_avg;

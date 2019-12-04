@@ -113,18 +113,18 @@ if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
     shade(tt, upper, tt, down, 'FillType',[1 2;2 1], 'FillColor', [0 0 0], 'FillAlpha', 0.1);
 end
 
-% Plot v
-figure(2);
-clf;
-hold on;
-% Plot simulated variance
-nice_plot(tt, fun_avg_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
-
-if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
-    upper = fun_avg_v + sqrt(fun_var(2,:))/sqrt(num_traces);
-    down = fun_avg_v - sqrt(fun_var(2,:))/sqrt(num_traces);
-    shade(tt, upper, tt, down, 'FillType',[1 2;2 1], 'FillColor', [0 0 0], 'FillAlpha', 0.1);
-end
+% % Plot v
+% figure(2);
+% clf;
+% hold on;
+% % Plot simulated variance
+% nice_plot(tt, fun_avg_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
+% 
+% if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
+%     upper = fun_avg_v + sqrt(fun_var(2,:))/sqrt(num_traces);
+%     down = fun_avg_v - sqrt(fun_var(2,:))/sqrt(num_traces);
+%     shade(tt, upper, tt, down, 'FillType',[1 2;2 1], 'FillColor', [0 0 0], 'FillAlpha', 0.1);
+% end
 end
 
 

@@ -18,13 +18,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 dt = 2*1e-7; % seconds
-t_interval = [0, 1e-3];
+t_interval = [0, 4e-4];
 num_traces = 100;
 eq_type = "sde";
 subs_f = 1;
 Ito = 1;
 n_dim = 2; % 2D: x and v
-initial_values = [1e-7, 0]; % start at origin
+initial_values = [1e-8, 0]; % start at origin
 
 [tt, fun_avg, fun_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initial_values);
 min(min(fun_var))

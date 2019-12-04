@@ -72,11 +72,14 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     f[0] =  v;
     // v' = ...
     // HARMONIC OSCILLATOR
-    f[1] = -eq.th.g_norm*v - pow(eq.ot.w, 2)*x;
+    //~ f[1] = -eq.th.g_norm*v - pow(eq.ot.w, 2)*x;
     //~ // OPT. TWEEZER
     //~ f[1] = -eq.th.g_norm*v + force_r(x, 0, eq)/eq.part.m;
     
     // PAUL TRAP
+    f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m; 
+    
+    // HYBRID TRAP
     //~ f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m + force_r(x, 0, eq)/eq.part.m;
     
     //~ // MARC & JAN

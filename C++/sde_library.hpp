@@ -41,8 +41,10 @@
 #include <vector> // vector library
 #include <string> // string library
 #include <stdlib.h> // includes rand()
+
 // MY LIBRARIES
 #include "particle_traps.hpp" // optical tweezer, paul trap and gaussian beam
+#include "num_vector.hpp" // basic vector manipulation library
 
 //======================================================================
 // EQUATION PARAMETERS STRUCT
