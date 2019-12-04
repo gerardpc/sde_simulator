@@ -58,6 +58,7 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     // v' =     
     // PAUL TRAP
     f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m; 
+    f[2] = x*v;
     
     // OTHER EXAMPLES:
     //
@@ -93,6 +94,7 @@ std::vector<double> diffusion_function(std::vector<double> y, double t, const eq
     f[0] = 0;
     // Stochastic force in momentum:
     f[1] = eq.th.sigma/eq.part.m;
+    f[2] = 0;
     
     // return output
     return f;

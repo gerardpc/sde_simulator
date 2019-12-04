@@ -96,14 +96,23 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initi
     ini_t = time.time()
     
     avg_f = np.loadtxt("./simulated_traces/sde_sample_path_avg_0.txt")
+    avg_f = avg_f.reshape((avg_f.size, 1))
+    
     for i in range(1, n_dim):
         new_row = np.loadtxt("./simulated_traces/sde_sample_path_avg_" + str(i) + ".txt")
-        avg_f = np.stack((avg_f, new_row))
-        
+        new_row = new_row.reshape((new_row.size, 1))
+        avg_f = np.concatenate((avg_f, new_row), axis=1)
+
     var_f = np.loadtxt("./simulated_traces/sde_sample_path_var_0.txt")
+    var_f = var_f.reshape((var_f.size, 1))
     for i in range(1, n_dim):
         new_row = np.loadtxt("./simulated_traces/sde_sample_path_var_" + str(i) + ".txt")
-        var_f = np.stack((var_f, new_row))
+        new_row = new_row.reshape((new_row.size, 1))
+        var_f = np.concatenate((var_f, new_row), axis=1)
+    
+    # Transpose to maintain coherence with rest of the code
+    avg_f = np.transpose(avg_f)
+    var_f = np.transpose(var_f)
     
     # calculate variance
     # the absolute is just a sanity check, it should be always positive
@@ -117,7 +126,7 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initi
     print("Plotting results.\n")
     # Generate time vector
     tt = np.arange(t_interval[0], t_interval[1], dt*subs_f)
-    
+
     if len(tt) != len(avg_f[0,:]): # Check that both vectors are of same length
         tt = tt[0:len(avg_f[0,:])]
         avg_f = avg_f[:, 0:len(tt)]
@@ -148,7 +157,7 @@ def numerical_sde(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initi
     plt.xlabel("time (s)", fontsize = 18)
     plt.ylabel("$\mathbb{E}(x^2(t))$", fontsize = 18)
     plt.title("Simulated variance", fontsize = 18)  
-    
+
     ax.set_xlim([min(tt), max(tt)])  
     ax.set_ylim([min(avg_f[x_dim, :]), max(avg_f[x_dim, :]*1.1)])    
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))   

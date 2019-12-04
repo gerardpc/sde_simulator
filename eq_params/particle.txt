@@ -1,4 +1,4 @@
 r 100e-9 radius_particle
 density 2200 kg/m^3_for_silica
 refractive_index 1.43 c/v
-Q 100 num_net_charges
+Q 500 num_net_charges

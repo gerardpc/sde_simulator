@@ -1,2 +1,2 @@
 temperature 295 K
-pressure 10 mbar
+pressure 1010 mbar

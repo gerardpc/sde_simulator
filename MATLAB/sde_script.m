@@ -23,9 +23,7 @@ num_traces = 100;
 eq_type = "sde";
 subs_f = 1;
 Ito = 1;
-n_dim = 2; % 2D: x and v
-initial_values = [1e-8, 0]; % start at origin
+n_dim = 3; % 2D: x and v
+initial_values = [1e-8, 0, 0]; % start at origin
 
 [tt, fun_avg, fun_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initial_values);
-min(min(fun_var))
-max(max(fun_var))
