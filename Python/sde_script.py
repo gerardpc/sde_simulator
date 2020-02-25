@@ -19,14 +19,14 @@
 
 import numerical_sde_cpp as sde
 
-dt = 1e-7 # seconds
+dt = 1e-7  # seconds
 t_interval = [0, 1e-4]
 num_traces = 400
 eq_type = "sde"
 subs_f = 1
 Ito = 1
-n_dim = 2 # 2D: x and v
-initial_values = [0, 0] # start at origin
+n_dim = 2  # 2D: x and v
+initial_values = [0, 0]  # start at origin
 
 # call function
 sde.numerical_sde(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initial_values)

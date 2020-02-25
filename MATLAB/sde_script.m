@@ -17,13 +17,13 @@
 %         initial_values -- vector with initial values, e.g. [0;0]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-dt = 2*1e-7; % seconds
-t_interval = [0, 4e-4];
-num_traces = 100;
+dt = 1e-8; % seconds
+t_interval = [0, 1e-2];
+num_traces = 50;
 eq_type = "sde";
-subs_f = 1;
+subs_f = 100;
 Ito = 1;
-n_dim = 3; % 2D: x and v
-initial_values = [1e-8, 0, 0]; % start at origin
+n_dim = 2; % 2D: x and v
+initial_values = [0, 0]; % start at origin
 
 [tt, fun_avg, fun_var] = numerical_sde_cpp(dt, t_interval, num_traces, subs_f, eq_type, Ito, n_dim, initial_values);

@@ -424,7 +424,7 @@ double dt, bool Ito, const eq_params &args){
         // calculate and print execution time
         auto stop = std::chrono::high_resolution_clock::now(); 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-        printf("\n\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n", 
+        printf("\n\nExecution time to simulate %d x %g s trace with dt = %.1e: %g s\n\n", 
                 num_traces, t_interval[1] - t_interval[0], dt, ((float) duration)/1e6);
 
     } else {  // not multithreading
@@ -453,7 +453,7 @@ double dt, bool Ito, const eq_params &args){
 int print_results(unsigned int n_dim, const std::vector<std::vector<double>> fun_avg,
 unsigned int subsampling_f, std::string statistic){
     std::vector<std::string> filename(n_dim);
-    std::cout << "Average traces saved in files:\n";
+    std::cout << "Traces saved in files:\n";
     for(unsigned int i = 0; i < n_dim; i++){
         // generate new filename
         filename[i] = "./simulated_traces/sde_sample_path_" + statistic + "_" + std::to_string(i) + ".txt";

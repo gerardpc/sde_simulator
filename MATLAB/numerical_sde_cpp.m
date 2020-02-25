@@ -56,6 +56,13 @@ if isfile('./simulated_traces/sde_sample_path_avg_0.txt')
     delete './simulated_traces/sde_sample_path_var_1.txt';
 end
 
+% recompile + link the eq_parameters.cpp file
+fprintf("Updating drift and diffusion equations...\n");
+cd ../C++/
+status = system("g++ -c eq_definitions.cpp");
+status = system("g++ -o sde.out sde.o sde_library.o num_vector.o physics.o eq_definitions.o -O3 -pthread");
+cd ../MATLAB/
+
 % call compiled C++ routine to generate traces
 fprintf("Calling C++ routine...\n");
 status = system("../C++/sde.out " + ...
@@ -105,7 +112,7 @@ figure(1);
 clf;
 hold on;
 % Plot simulated variance
-nice_plot(tt, fun_avg_x, "time (s)", "$\mathbf{E}[x^2(t)]$", "Simulated variance");
+nice_plot(tt, fun_avg_x, "time (s)", "$\mathbf{E}[f(x(t))]$", "Simulated variance");
 
 if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
     upper = fun_avg_x + sqrt(fun_var(1,:))/sqrt(num_traces);
@@ -118,7 +125,7 @@ figure(2);
 clf;
 hold on;
 % Plot simulated variance
-nice_plot(tt, fun_avg_v, "time (s)", "$\mathbf{E}[v^2(t)]$", "Simulated variance");
+nice_plot(tt, fun_avg_v, "time (s)", "$\mathbf{E}[f(v(t))]$", "Simulated variance");
 
 if eq_type == "sde" && num_traces > 1 % add 1 sigma standard error interval
     upper = fun_avg_v + sqrt(fun_var(2,:))/sqrt(num_traces);

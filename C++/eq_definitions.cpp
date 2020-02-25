@@ -51,25 +51,35 @@ std::vector<double> drift_function(std::vector<double> y, double t, const eq_par
     // use physical names
     double x = y[0];
     double v = y[1];    
-    
-    // Definitions: experimental parameters
     // x' = v
     f[0] =  v;
-    // v' =     
+    
+    //~ // IRENE & GIACOMO
+    //~ double T1 = y[0];
+    //~ double T2 = y[1];
+    
+    //~ double T0 = 295;
+    //~ double l_ov_T1 = 1;
+    //~ double l_ov_T2 = 2;
+    //~ double l_res = l_0 + l_ov_T1*(T1 - T0) + l_ov_T2*(T2 - T0);
+    
+    // Definitions: experimental parameters
+
     // PAUL TRAP
-    f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m; 
-    f[2] = x*v;
+    // f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m; 
+    // f[2] = x*v;
     
     // OTHER EXAMPLES:
     //
     // HARMONIC OSCILLATOR
-    // f[1] = -eq.th.g_norm*v - pow(eq.ot.w, 2)*x;
+    //f[1] = -eq.th.g_norm*v - pow(eq.ot.w, 2)*x;
     
     // OPT. TWEEZER TRAP
-    // f[1] = -eq.th.g_norm*v + force_r(x, 0, eq)/eq.part.m;
+    f[1] = -eq.th.g_norm*v + force_z(0, x, eq)/eq.part.m;
 
     // HYBRID TRAP
-    // f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m + force_r(x, 0, eq)/eq.part.m;
+    //f[1] = -eq.th.g_norm*v + eq.pt.eps*cos(eq.pt.w_dr*t)*x/eq.part.m + force_r(x, 0, eq)/eq.part.m;
+   
     
     // MARC & JAN 
     // double w_0 = 2*M_PI*120e3;

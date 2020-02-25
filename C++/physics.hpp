@@ -40,6 +40,7 @@ struct gaussian_beam{
     // laser/lens parameters
     double c_factor;
     double lambda;
+    double k; 
     double P_0;
     double NA;
     // proper Gaussian beam parameters
@@ -57,10 +58,11 @@ struct particle{
     double m;
     double n;
     double alpha;
+    double alpha_im;
     double Q;
     double h;
     void print();
-    void fill();
+    void fill(gaussian_beam &gb);
 };
 
 // Thermodynamics parameters struct
@@ -132,7 +134,7 @@ double particle_mass(double r, double density);
 // Gaussian beam width
 double gb_w(double z, const gaussian_beam &gb);
 
-// Gaussiain beam intensity
+// Gaussian beam intensity
 double gb_I(double r, double z, const gaussian_beam &gb);
 
 // Intensity gradient in the r direction
@@ -140,20 +142,23 @@ double grad_I_r(double r, double z, const gaussian_beam &gb, double h);
 
 // Intensity gradient in the z direction
 double grad_I_z(double r, double z, const gaussian_beam &gb, double h);
-
+    
 // Field square gradient in the r direction
 double grad_E2_r(double r, double z, const gaussian_beam &gb, double h);
 
 // Field square gradient in the z direction
 double grad_E2_z(double r, double z, const gaussian_beam &gb, double h);
 
-// Dipole force f_r(r,z), Gaussian beam 
+// Gradient force f_r(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
 double force_r_gb(double r, double z, double alpha, const gaussian_beam &gb, double h);
 
-// Dipole force f_z(r,z), Gaussian beam 
+// Gradient force f_z(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
 double force_z_gb(double r, double z, double alpha, const gaussian_beam &gb, double h);
+
+// Scattering force f_scat(r,z), takes parameters from eq_params
+double scat_force_z(double r, double z, const eq_params &eq);
 
 // paul trap force field
 double force_paul_trap(double x, double t, const paul_trap &pt);
@@ -163,7 +168,6 @@ double force_r(double r, double z, const eq_params &eq);
 
 // Dipole force f_z(r,z), takes parameters from eq_params
 double force_z(double r, double z, const eq_params &eq);
-
 
 
 

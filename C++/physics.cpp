@@ -57,6 +57,7 @@ void particle::print(){
     printf("m: %.4e\n", m);
     printf("n: %.4e\n", n);
     printf("alpha: %.4e\n", alpha);
+    printf("alpha_im: %.4e\n", alpha_im);
     printf("Q: %.4e\n", Q);
     printf("h: %.4e\n", h);
 }
@@ -113,6 +114,7 @@ void gaussian_beam::fill(){
     // Write values on struct members   
     // laser beam
     lambda = file_values[0]*length_unit; // laser wavelength 
+    k = 2*M_PI/lambda; // wavevector
     P_0 = file_values[1]*1e-3; // laser power in W
     NA = file_values[2]; // Gaussian beam NA    
     // numerical details    
@@ -123,7 +125,7 @@ void gaussian_beam::fill(){
     I_0 = P_0*2/(M_PI*pow(w_0, 2));
 }
 
-void particle::fill(){    
+void particle::fill(gaussian_beam &gb){    
     // particle file
     std::ifstream input_file("../eq_params/particle.txt");    
     // vector of doubles containing values from file
@@ -144,7 +146,8 @@ void particle::fill(){
     density = file_values[1];
     m = 4./3.*M_PI*pow(r, 3)*density;
     n = file_values[2];
-    alpha = 4*M_PI*pow(r, 3)*eps_0*(pow(n, 2) - 1)/(pow(n, 2) + 2); // induced bulk dipole
+    alpha = 4*M_PI*pow(r, 3)*eps_0*(pow(n, 2) - 1)/(pow(n, 2) + 2); // induced real polarizability
+    alpha_im =  alpha*alpha/(6*M_PI*eps_0)*pow(gb.k,3); //imaginary part polarizability
     Q = file_values[3];
     h = r*1e-4;
 }
@@ -223,7 +226,7 @@ void paul_trap::fill(particle &part, thermodynamics &th){
     V = file_values[1];
     d = file_values[2];
     eps = e_charge*part.Q*V/pow(d,2);    
-    // value of alpha, beta, as defined in Iz. et al PRE 1995
+    // value of alpha, beta, as defined in Izmailov et al PRE 1995
     alpha_iz = 2*th.gamma/(part.m*w_dr);
     beta_iz = 4*part.Q*V*e_charge/(part.m*pow(d*w_dr, 2));
 }
@@ -234,7 +237,7 @@ void paul_trap::fill(particle &part, thermodynamics &th){
 //======================================================================
 void eq_params::fill(){
     gb.fill();
-    part.fill();
+    part.fill(gb);
     th.fill(part);
     ot.fill();
     ot.fill_gb_w(part, gb);
@@ -296,16 +299,21 @@ double grad_E2_z(double r, double z, const gaussian_beam &gb, double h){
     return grad_I_z(r,z,gb,h)/(gb.c*gb.eps_0);
 }
 
-// Dipole force f_r(r,z), Gaussian beam 
+// Gradient force f_r(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
 double force_r_gb(double r, double z, double alpha, const gaussian_beam &gb, double h){
     return 1./2.*alpha*grad_E2_r(r,z,gb,h);
 }
 
-// Dipole force f_z(r,z), Gaussian beam 
+// Gradient force f_z(r,z), Gaussian beam 
 // for a Rayleigh particle (a << lambda) or atom
 double force_z_gb(double r, double z, double alpha, const gaussian_beam &gb, double h){
     return 1./2.*alpha*grad_E2_z(r,z,gb,h);
+}
+
+// Scattering force f_scat(r,z), takes parameters from eq_params
+double scat_force_z(double r, double z, const eq_params &eq){
+    return eq.gb.k/(eq.gb.eps_0*eq.gb.c)*eq.part.alpha_im*gb_I(r, z, eq.gb);
 }
 
 // paul trap force field
@@ -320,11 +328,8 @@ double force_r(double r, double z, const eq_params &eq){
 
 // Dipole force f_z(r,z), takes parameters from eq_params
 double force_z(double r, double z, const eq_params &eq){
-    return force_z_gb(r, z, eq.part.alpha, eq.gb, eq.part.h);
+    return force_z_gb(r, z, eq.part.alpha, eq.gb, eq.part.h) + scat_force_z(r, z, eq);
 }
-
-
-
 
 
 

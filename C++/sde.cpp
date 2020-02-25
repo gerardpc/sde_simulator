@@ -150,7 +150,9 @@ int main(int argc, char* argv[]){
     // Print results   
     // avg trace number i (where i is degree of freedom number i) will be
     // printed on file ./simulated_traces/sde_sample_path_i.txt
-    print_results(n_dim, fun_avg, subs_f, "avg");
+    std::cout << "-> Average of f(x(t))\n";
+    print_results(n_dim, fun_avg, subs_f, "avg");    
+    std::cout << "\n-> Variance of f(x(t))\n";
     print_results(n_dim, fun_var, subs_f, "var");
     
     //==================================================================    

@@ -87,14 +87,18 @@ Open a terminal, go to the C++ folder
 
     >> cd C++
 
-Compile the code with the following command
+The C++ code compilation can be performed in two steps of compilation + linking:
 
-    >> g++ sde.cpp sde_library.cpp num_vector.cpp physics.cpp eq_definitions.cpp -o sde.out -O3 -pthread
+    >> g++ -c sde.cpp sde_library.cpp num_vector.cpp physics.cpp eq_definitions.cpp -O3 -pthread
+    >> g++ -o sde.out sde.o sde_library.o num_vector.o physics.o eq_definitions.o -O3 -pthread
 
 The option -std=c++11 is in general not needed (your compiler probably 
 uses the C++11 standard by default). If you have trouble compiling, try
 it again by adding this option.
 
+If you just want to test the code, you can also compile it with a single command:
+
+    >> g++ sde.cpp sde_library.cpp num_vector.cpp physics.cpp eq_definitions.cpp -o sde.out -O3 -pthread
 
 2- Generate traces and plot the results
 --------------
@@ -158,9 +162,12 @@ moves in one dimension, the equations will be
 The first equation is the definition of the velocity, and the 2nd equation 
 is Newton's 2nd law. This is precisely the equation included in the repository 
 by default: inspect the code to understand the syntax.
-Following this example, other, arbitrary, drift and diffusion functions
+
+Following this example, other (arbitrary) drift and diffusion functions
 can be written. Of course, every time any of these functions is changed, the
-C++ code has to be recompiled with the command indicated in section 1.
+C++ code has to be recompiled, but the Python/MATLAB scripts already take care of this by
+default (they automatically recompile + link the eq_definitions.cpp file, which is very
+small and thus very fast).
 
 3- Changing the function f(x) that is used in the expected value, <f(Y_t)>
 --------------
