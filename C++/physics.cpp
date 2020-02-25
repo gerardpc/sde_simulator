@@ -316,11 +316,10 @@ double scat_force_z(double r, double z, const eq_params &eq){
     return eq.gb.k/(eq.gb.eps_0*eq.gb.c)*eq.part.alpha_im*gb_I(r, z, eq.gb);
 }
 
-// paul trap force field
-double force_paul_trap(double x, double t, const paul_trap &pt){
-    return (pt.eps*cos(pt.w_dr*t)*x);
-}
-
+//======================================================================
+// FULL FORCES
+//======================================================================
+// OPTICAL FORCE:
 // Dipole force f_r(r,z), takes parameters from eq_params
 double force_r(double r, double z, const eq_params &eq){
     return force_r_gb(r, z, eq.part.alpha, eq.gb, eq.part.h);
@@ -331,7 +330,11 @@ double force_z(double r, double z, const eq_params &eq){
     return force_z_gb(r, z, eq.part.alpha, eq.gb, eq.part.h) + scat_force_z(r, z, eq);
 }
 
-
+// PAUL TRAP FORCE:
+// paul trap force field
+double force_paul_trap(double x, double t, const paul_trap &pt){
+    return (pt.eps*cos(pt.w_dr*t)*x);
+}
 
 
 

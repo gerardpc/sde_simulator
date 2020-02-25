@@ -179,32 +179,68 @@ Just remember to write it in C++.
 4- If you want to use this code to simulate Brownian particles...
 --------------
 The code is specifically designed to be easy to do that (although of 
-course it is not mandatory; any drift/diffusion functions can be used). 
-You should use the struct "eq_params", defined in physics.cpp/physics.hpp,
-which uses the parameters defined in the folder "eq_params" and the functions 
-and struct members from particle_traps.cpp and particle_traps.hpp.
-The values from this struct can then be used to define the drift and diffusion,
-since eq_params is passed as one of the function parameters.
+course it is not mandatory; any drift/diffusion functions can be introduced). 
+The file eq_definitions.cpp includes all the functions defined in physics.hpp,
+which can be thus used freely in the drift/diffusion. They include tested functions
+of the dipole force (assuming a Gaussian Beam), Paul trap, etc. 
 
-eq_params has five substructs:
+To access the problem parameters, you should use the class "eq_params", defined in 
+physics.cpp/physics.hpp. This class is, essentially, a definition of the equivalent 
+"experiment" that you would do if you were to perform it in the laboratory. It 
+includes all the necessary information: parameters of the optical tweezers, 
+paul trap, particle type, radius, temperature, pressure, etc. 
 
-1. Gaussian beam: defines a Gaussian beam parameters. Its values can be
-modified in ./eq_params/gaussian_beam.txt.
+The class is initialized every time you run the code, and loads the values of the 
+parameters from the files defined in the folder "eq_params" without the need to recompile
+anything. The related functions and class members can be inspected in the files
+physics.cpp/physics.hpp in the folder C++.
 
-2. Particle: defines the trapped particle parameters. Its values can be
-modified in ./eq_params/particle.txt.
+The class is passed (by reference) as one of the input parameters to the functions 
+that define the drift and diffusion of the SDE (not mandatory but if you want to 
+work with Brownian particles I suggest you use it).
 
-3. Thermodynamics: defines the thermodynamical parameters. Its values can be
+eq_params has five subclasses and two functions:
+
+    struct eq_params{
+        // the members of this struct are specific to my problem of interest,
+        // but can be replaced to any other members/parameters to send variables
+        // inside the drift and diffusion functions
+        gaussian_beam gb;
+        particle part;
+        thermodynamics th;
+        opt_trap ot;
+        paul_trap pt;
+        void fill();
+        void print();
+    };
+
+
+1. Gaussian beam: defines a Gaussian beam parameters. Inside eq_definitions it can
+be accessed as "eq.gb.parameter_name". Its values can be modified in 
+./eq_params/gaussian_beam.txt.
+
+2. Particle: defines the trapped particle parameters. Inside eq_definitions it can
+be accessed as "eq.part.parameter_name". Its values can be
+modified in ./eq_params/particle.txt. 
+
+3. Thermodynamics: defines the thermodynamical parameters. Inside eq_definitions it can
+be accessed as "eq.th.parameter_name". Its values can be
 modified in ./eq_params/thermodynamics.txt.
 
-4. Optical trap: defines the optical dipole trap parameters. Its values can be
+4. Optical trap: defines the optical dipole trap parameters. Inside eq_definitions it can
+be accessed as "eq.ot.parameter_name". Its values can be
 modified in ./eq_params/optical_trap.txt.
 
-5. Paul trap: defines the Paul trap parameters. Its values can be
+5. Paul trap: defines the Paul trap parameters. Inside eq_definitions it can
+be accessed as "eq.pt.parameter_name". Its values can be
 modified in ./eq_params/paul_trap.txt.
 
-Since the parameters are imported from files, the values can be modified
-without the need to recompile the code every time. 
+6. fill() is run at the beginning of the code and loads the parameters in the files to 
+the object.
+
+7. print() prints on stdout the current values in the eq object.
+
+Again, the values can be modified without the need to recompile the code every time. 
 
 More details can be found by inspecting the struct definitions in 
 physics.cpp/physics.hpp

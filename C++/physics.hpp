@@ -160,14 +160,19 @@ double force_z_gb(double r, double z, double alpha, const gaussian_beam &gb, dou
 // Scattering force f_scat(r,z), takes parameters from eq_params
 double scat_force_z(double r, double z, const eq_params &eq);
 
-// paul trap force field
-double force_paul_trap(double x, double t, const paul_trap &pt);
-
+//======================================================================
+// FULL FORCES
+//======================================================================
+// OPTICAL FORCE:
 // Dipole force f_r(r,z), takes parameters from eq_params
 double force_r(double r, double z, const eq_params &eq);
 
 // Dipole force f_z(r,z), takes parameters from eq_params
 double force_z(double r, double z, const eq_params &eq);
+
+// PAUL TRAP FORCE:
+// paul trap force field
+double force_paul_trap(double x, double t, const paul_trap &pt);
 
 
 
